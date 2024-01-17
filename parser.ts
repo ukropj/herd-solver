@@ -24,22 +24,41 @@ export type Puzzle = {
   fixed: boolean;
 };
 
+const validateKind = (pieceKind: string, totalParts: number) => {
+  if (
+    ["B", "W", "WW", "WWW"].includes(pieceKind) &&
+    pieceKind.length === totalParts
+  ) {
+    return pieceKind as PieceKind;
+  } else throw Error(`Invalid piece kind string: ${pieceKind}`);
+};
+
 const parsePos = (posStr: string) => {
-  const pos = posStr.split(",").map((num) => parseInt(num, 10)) as Pos;
+  const pos = posStr.split(",").map((num) => parseInt(num, 10));
   if (
     pos.length === 2 &&
     typeof pos[0] === "number" &&
     typeof pos[1] === "number"
-  )
-    return pos;
-  else throw Error(`Cannot parse position string: ${posStr}`);
+  ) {
+    return pos as Pos;
+  } else throw Error(`Cannot parse position string: ${posStr}`);
+};
+
+const parseWall = (wallStr: string) => {
+  const wall = wallStr.split("|").map(parsePos);
+  if (wall.length == 2) {
+    return wall as Wall;
+  } else throw Error(`Cannot parse wall string: ${wallStr}`);
 };
 
 const buildMultiId = (id: string, part: number, totalParts: number) =>
   totalParts > 1 ? `${id}:${part + 1}/${totalParts}` : id;
 
-// const buildKind = (kind: string, totalParts: number) =>
-//   (totalParts > 1 ? "".padEnd(totalParts, kind) : kind) as PieceKind;
+const parsePlanRow = (planRow: string) => {
+  if (/^[ .wbo]+$/.test(planRow)) {
+    return planRow.split("") as TileKind[];
+  } else throw Error(`Cannot parse plan row string: ${planRow}`);
+};
 
 export const parsePuzzles = (lines: string[]) => {
   let puzzle: Puzzle;
@@ -90,7 +109,7 @@ export const parsePuzzles = (lines: string[]) => {
               newPieces[id] = {
                 id,
                 letter: letter,
-                kind: kind as PieceKind,
+                kind: validateKind(kind, positions.length),
                 pos: positions[i],
                 herdIds: positions.length > 1 ? partIds : undefined,
               };
@@ -100,11 +119,7 @@ export const parsePuzzles = (lines: string[]) => {
           }, {});
       } else if (/^walls:/.test(line)) {
         // walls
-        puzzle.walls = line
-          .split(":")[1]
-          .trim()
-          .split(/\s+/)
-          .map((wallStr) => wallStr.split("|").map(parsePos) as Wall);
+        puzzle.walls = line.split(":")[1].trim().split(/\s+/).map(parseWall);
       } else if (/^optimal:/.test(line)) {
         // optimal moves
         puzzle.optimal = parseInt(line.split(":")[1], 10);
@@ -120,7 +135,7 @@ export const parsePuzzles = (lines: string[]) => {
         return [...puzzles, newPuzzle];
       } else {
         // plan/map row
-        puzzle.plan.push(line.split("") as TileKind[]);
+        puzzle.plan.push(parsePlanRow(line));
       }
     } catch (e) {
       console.log(`Parsing error (line ${index})`, e);
