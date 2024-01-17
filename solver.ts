@@ -1,10 +1,6 @@
-import { Piece, Pieces, PieceKind, Pos, Puzzle } from "./parser";
+import { Piece, Pieces, Pos, Puzzle, TileKind } from "./parser";
 
-// const LOG = false;
-
-// const log = (...args: any[]) => {
-//   if (LOG) console.log(...args);
-// };
+const LOG = false;
 
 type Dir = Readonly<[number, number, string, string]>;
 
@@ -30,28 +26,30 @@ const DIRS: Dir[] = [
 export const comparePieces = (p1: Piece, p2: Piece) =>
   p1.id.localeCompare(p2.id);
 
+const toStr = (pos?: Pos | null) => pos?.join(",") ?? "";
+
 const stringify = (piecesArr: Piece[]) =>
   piecesArr
     .sort((p1: Piece, p2: Piece) => {
       if (p1.kind === p2.kind) {
-        return p1.pos.join("").localeCompare(p2.pos.join(""));
+        return toStr(p1.pos).localeCompare(toStr(p2.pos));
       }
       return p1.kind.localeCompare(p2.kind);
     })
     .map(
-      ({ kind, pos: [x, y], coveredById }) =>
-        `${kind}:${coveredById ?? ""}:${x}:${y}`
+      ({ kind, pos, coveredById }) =>
+        `${kind}:${coveredById ?? ""}:${toStr(pos)}`
     )
     .join(",");
 
 const findEndTiles = ({ plan }: Puzzle) => {
-  const endTiles: { kind: PieceKind; pos: Pos }[] = [];
+  const endTiles: { kind: TileKind; pos: Pos }[] = [];
 
   plan.forEach((row, y) => {
     row.forEach((kind, x) => {
       if (/^[bw]$/.test(kind)) {
         endTiles.push({
-          kind: kind.toUpperCase() as PieceKind,
+          kind,
           pos: [x, y],
         });
       }
@@ -87,25 +85,35 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   const allowNewState = (hash: string, step: number) =>
     statesMap[hash] == null || statesMap[hash] > step;
 
-  const getTopPieceInPlan = ([x, y]: Pos, piecesArr: Piece[]) =>
+  const getTopPieceInPlan = (
+    [x, y]: Pos,
+    piecesArr: Piece[],
+    ignoreIds?: string[]
+  ) =>
     piecesArr.find(
-      ({ coveredById, pos: [px, py] }) => px === x && py === y && !coveredById
+      ({ id, coveredById, pos: [px, py] }) =>
+        px === x &&
+        py === y &&
+        !coveredById &&
+        (!ignoreIds || !ignoreIds.includes(id))
     );
 
-  const getInPlan = ([x, y]: Pos, piecesArr?: Piece[]) =>
-    (piecesArr ? getTopPieceInPlan([x, y], piecesArr) : null)?.kind ??
+  const getInPlan = ([x, y]: Pos, piecesArr?: Piece[], ignoreIds?: string[]) =>
+    (piecesArr ? getTopPieceInPlan([x, y], piecesArr, ignoreIds) : null)
+      ?.kind[0] ??
     puzzle.plan[y]?.[x] ??
     " ";
 
-  const isSolved = ({ piecesArr }: State) =>
+  const isSolved = ({ pieces, piecesArr }: State) =>
     endTiles.every((tile) =>
       piecesArr.some(
-        ({ kind, coveredById, coversId, pos: [x, y] }) =>
-          tile.kind === kind &&
+        ({ kind, coveredById, coversId, pos: [x, y], herdIds }) =>
+          tile.kind === kind[0].toLowerCase() &&
           tile.pos[0] === x &&
           tile.pos[1] === y &&
-          !coveredById &&
-          !coversId
+          coveredById == null &&
+          coversId == null &&
+          (herdIds?.every((id) => pieces[id].coveredById == null) ?? true)
       )
     );
 
@@ -114,14 +122,61 @@ export const solvePuzzle = (puzzle: Puzzle) => {
       ([p1hash, p2hash]) => p1hash === p1.toString() && p2hash === p2.toString()
     );
 
-  const canSlide = (from: Pos, dir: Dir, piecesArr: Piece[]) => {
-    const to = add(from, dir);
-    return !isWall(from, to) && EMPTY.test(getInPlan(to, piecesArr));
+  const canSlide = (
+    from: Pos[],
+    dir: Dir,
+    piecesArr: Piece[],
+    ignoreIds?: string[]
+  ) =>
+    from.every((pos) => {
+      if (BUMP.test(getInPlan(pos))) return false;
+      const to = add(pos, dir);
+      // check if a wall would "slice a moving herd"
+      if (
+        from.length > 1 &&
+        from.some((otherPos) => isWall(add(otherPos, dir), to))
+      )
+        return false;
+
+      return (
+        !isWall(pos, to) && EMPTY.test(getInPlan(to, piecesArr, ignoreIds))
+      );
+    });
+
+  const moveSlide = (
+    from: Pos,
+    dir: Dir,
+    state: State,
+    herdToCheck?: Piece[]
+  ) => {
+    let moved = false;
+    let pos: Pos = from;
+    let otherPoses = herdToCheck?.map(({ pos }) => pos);
+    let ignoreIds = herdToCheck?.flatMap((herdPiece) => [
+      herdPiece.id,
+      ...getPiecesAbove(herdPiece, state.pieces).map(({ id }) => id),
+    ]);
+    let vector: Pos = [0, 0];
+    while (canSlide(otherPoses ?? [pos], dir, state.piecesArr, ignoreIds)) {
+      moved = true;
+      vector = add(vector, dir);
+      pos = add(pos, dir);
+      otherPoses = otherPoses?.map((otherPos) => add(otherPos, dir));
+    }
+    return moved ? vector : null;
   };
 
   const canJump = (from: Pos, dir: Dir, piecesArr: Piece[]) => {
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
+    // console.log(
+    //   toStr(from),
+    //   dir,
+    //   !isWall(from, jumpOver),
+    //   OCCUPIED.test(getInPlan(jumpOver, piecesArr)),
+    //   !isWall(jumpOver, to),
+    //   VALID.test(getInPlan(to))
+    // );
     return (
       !isWall(from, jumpOver) &&
       OCCUPIED.test(getInPlan(jumpOver, piecesArr)) &&
@@ -130,15 +185,8 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     );
   };
 
-  const moveSlide = (from: Pos, dir: Dir, piecesArr: Piece[]) => {
-    let pos: Pos = [...from];
-    while (canSlide(pos, dir, piecesArr)) {
-      pos = add(pos, dir);
-    }
-    return pos;
-  };
-
-  const moveJump = (startPos: Pos, dir: Dir) => add(add(startPos, dir), dir);
+  const moveJump = (startPos: Pos, dir: Dir, state: State) =>
+    canJump(startPos, dir, state.piecesArr) ? add(add([0, 0], dir), dir) : null;
 
   const getPiecesUnder = ({ coversId }: Piece, pieces: Pieces): Piece[] => {
     if (!coversId) {
@@ -156,52 +204,112 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     return [pieceAbove, ...getPiecesAbove(pieceAbove, pieces)];
   };
 
-  const updateOtherPieces = (
-    movedPiece: Piece,
+  const updatePieces = (
+    mainPiece: Piece,
+    vector: Pos,
     didJump: boolean,
-    preMoveState: State
+    preMoveState: State,
+    herd?: Piece[]
   ): Pieces => {
-    const updated: Pieces = {};
-    const origPiece = preMoveState.pieces[movedPiece.id];
+    LOG && console.log("---------------------------");
+    const mainEndPos = add(mainPiece.pos, vector);
+
+    const updated: Pieces = {
+      [mainPiece.id]: {
+        ...mainPiece,
+        pos: mainEndPos,
+        coversId: !didJump
+          ? mainPiece.coversId
+          : getTopPieceInPlan(mainEndPos, preMoveState.piecesArr)?.id,
+      },
+    };
 
     if (didJump) {
-      // console.log(movedPiece.id, "jumped");
-      const toUncoverId = origPiece.coversId;
+      LOG && console.log(mainPiece.id, "jumped to", toStr(mainEndPos));
+      const toUncoverId = mainPiece.coversId;
       if (toUncoverId) {
-        // console.log("  ", toUncoverId, "uncovered");
+        LOG &&
+          console.log("  ", toUncoverId, "uncovered at", toStr(mainPiece.pos));
+
         updated[toUncoverId] = {
           ...preMoveState.pieces[toUncoverId],
           coveredById: undefined, // not covered any more
         };
       }
       const toCover = didJump
-        ? getTopPieceInPlan(movedPiece.pos, preMoveState.piecesArr)
+        ? getTopPieceInPlan(mainEndPos, preMoveState.piecesArr)
         : null;
       if (toCover) {
-        // console.log("  ", toCover.id, "covered");
+        LOG && console.log("  ", toCover.id, "covered at", toStr(mainEndPos));
+
         updated[toCover.id] = {
           ...toCover,
-          coveredById: movedPiece.id,
+          coveredById: mainPiece.id,
         };
       }
     } else {
-      // console.log(movedPiece.id, "slid");
-      getPiecesUnder(movedPiece, preMoveState.pieces).forEach((toMove) => {
-        // console.log("  ", toMove.id, "slid too");
-        updated[toMove.id] = {
-          ...toMove,
-          pos: movedPiece.pos,
-        };
-      });
+      LOG && console.log(mainPiece.id, "slid to", toStr(mainEndPos));
+      getPiecesUnder(updated[mainPiece.id], preMoveState.pieces).forEach(
+        (toMove) => {
+          LOG && console.log("  ", toMove.id, "slid too to", toStr(mainEndPos));
+
+          updated[toMove.id] = {
+            ...toMove,
+            pos: mainEndPos,
+          };
+        }
+      );
+      if (herd) {
+        herd.forEach((herdPiece) => {
+          if (updated[herdPiece.id]) return; // already updated
+
+          LOG &&
+            console.log(
+              "  ",
+              herdPiece.id,
+              "slid too as part of the herd to",
+              toStr(add(herdPiece.pos, vector))
+            );
+
+          updated[herdPiece.id] = {
+            ...herdPiece,
+            pos: add(herdPiece.pos, vector),
+          };
+          getPiecesAbove(herdPiece, preMoveState.pieces).forEach((toMove) => {
+            if (updated[toMove.id] || mainPiece.id === toMove.id) return; // already updated
+            LOG &&
+              console.log(
+                "  ",
+                toMove.id,
+                "moved on top herd to",
+                toStr(add(toMove.pos, vector))
+              );
+
+            updated[toMove.id] = {
+              ...toMove,
+              pos: add(toMove.pos, vector),
+            };
+          });
+        });
+      }
     }
 
-    getPiecesAbove(movedPiece, preMoveState.pieces).forEach((toMove) => {
-      // console.log("  ", toMove.id, "moved on top of it");
-      updated[toMove.id] = {
-        ...toMove,
-        pos: movedPiece.pos,
-      };
-    });
+    getPiecesAbove(updated[mainPiece.id], preMoveState.pieces).forEach(
+      (toMove) => {
+        LOG &&
+          console.log(
+            "  ",
+            toMove.id,
+            "moved on top of it to",
+            toStr(mainEndPos)
+          );
+
+        updated[toMove.id] = {
+          ...toMove,
+          pos: mainEndPos,
+        };
+      }
+    );
 
     return updated;
   };
@@ -240,71 +348,61 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         const startPos = piece.pos;
         // check every cardinal direction
         DIRS.forEach((dir) => {
-          let endPos: Pos | null = null;
-          let didJump = false;
+          [true, false].forEach((isJump) => {
+            let vector: Pos | null = null;
+            const herd = getPiecesUnder(piece, state.pieces)
+              .find(({ herdIds }) => herdIds != null)
+              ?.herdIds?.map((id) => state.pieces[id]);
 
-          // attempt slide
-          if (
-            !BUMP.test(getInPlan(startPos)) &&
-            canSlide(startPos, dir, state.piecesArr)
-          ) {
-            endPos = moveSlide(startPos, dir, state.piecesArr);
-          }
-          // attempt jump
-          else if (canJump(startPos, dir, state.piecesArr)) {
-            endPos = moveJump(startPos, dir);
-            didJump = true;
-          }
-          // console.log(buildAction(piece.letter, didJump, dir, piece.coversId));
-
-          if (endPos) {
-            const movedPiece = {
-              ...piece,
-              pos: endPos,
-              coversId: !didJump
-                ? piece.coversId
-                : getTopPieceInPlan(endPos, state.piecesArr)?.id,
-            };
-
-            const newPieces = {
-              ...state.pieces,
-              [movedPiece.id]: movedPiece,
-              ...updateOtherPieces(movedPiece, didJump, state),
-            };
-
-            const newState = {
-              step: state.step + 1,
-              pieces: newPieces,
-              piecesArr: Object.values(newPieces),
-              actions: [
-                ...state.actions,
-                buildAction(movedPiece, didJump, dir, newPieces),
-              ],
-            };
-            const hash = stringify(newState.piecesArr);
-            // console.log(hash);
-            if (allowNewState(hash, newState.step)) {
-              statesMap[hash] = newState.step;
-              nextStates.push(newState);
-
-              // console.log(
-              //   newState.step,
-              //   stringify(newState.piecesArr),
-              //   newState.actions.join(" ")
-              // );
-              // console.log(states.length);
+            if (isJump) {
+              // attempt jump
+              vector = moveJump(startPos, dir, state);
+            } else {
+              // attempt slide
+              vector = moveSlide(startPos, dir, state, herd);
             }
-          }
+            // console.log(
+            //   toStr(endPos) || "no move",
+            //   buildAction(piece, didJump, dir, state.pieces)
+            // );
+
+            if (vector) {
+              const newPieces = {
+                ...state.pieces,
+                ...updatePieces(piece, vector, isJump, state, herd),
+              };
+
+              const newState = {
+                step: state.step + 1,
+                pieces: newPieces,
+                piecesArr: Object.values(newPieces),
+                actions: [
+                  ...state.actions,
+                  buildAction(newPieces[piece.id], isJump, dir, newPieces),
+                ],
+              };
+              const hash = stringify(newState.piecesArr);
+              // console.log(hash);
+              if (allowNewState(hash, newState.step)) {
+                statesMap[hash] = newState.step;
+                nextStates.push(newState);
+
+                // console.log(
+                //   newState.step,
+                //   stringify(newState.piecesArr),
+                //   newState.actions.join(" ")
+                // );
+                // console.log(stateMap.length);
+              }
+            }
+          });
         });
       });
     return nextStates;
   };
 
   const evaluateNext = (state: State): State | null => {
-    // if (solvedSteps < puzzle.optimal) {
-    // already found a better solution
-    // return null;
-    // }
+    // if (state.step === 3) return null;
     if (
       state.step <= puzzle.optimal &&
       state.step < solvedSteps &&

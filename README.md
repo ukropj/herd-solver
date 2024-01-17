@@ -44,7 +44,8 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
 
 - a line starting with `#` containing the name/id of the puzzle
 - a line starting with `pieces:` with starting pieces positions in format
-  - `{type of piece},{x},{y}`, available tpyes are `B` (Shephard) and `W` (Sheep)
+  - `{type of piece}@{x},{y}`, available tyes are `B` (Shephard) and `W` (Sheep)
+    - "herds" have types `WW` and `WWW` and all segments positions need to be specified eg. `WWW@1,2+1,3+2,3`
   - pieces are separated by any number of spaces
 - optionally: a line starting with `walls:` containing pairs of slaces blocked by walls in format
   - `{x1},{y1}|{x2},{y2}`

@@ -1,5 +1,5 @@
 export type TileKind = "." | "b" | "w" | "o";
-export type PieceKind = "B" | "W";
+export type PieceKind = "B" | "W" | "WW" | "WWW";
 export type Pos = [number, number];
 export type Wall = [Pos, Pos];
 
@@ -10,6 +10,7 @@ export type Piece = {
   readonly pos: Pos;
   readonly coversId?: string;
   readonly coveredById?: string;
+  readonly herdIds?: string[];
 };
 
 export type Pieces = Record<string, Piece>;
@@ -22,6 +23,23 @@ export type Puzzle = {
   optimal: number;
   fixed: boolean;
 };
+
+const parsePos = (posStr: string) => {
+  const pos = posStr.split(",").map((num) => parseInt(num, 10)) as Pos;
+  if (
+    pos.length === 2 &&
+    typeof pos[0] === "number" &&
+    typeof pos[1] === "number"
+  )
+    return pos;
+  else throw Error(`Cannot parse position string: ${posStr}`);
+};
+
+const buildMultiId = (id: string, part: number, totalParts: number) =>
+  totalParts > 1 ? `${id}:${part + 1}/${totalParts}` : id;
+
+// const buildKind = (kind: string, totalParts: number) =>
+//   (totalParts > 1 ? "".padEnd(totalParts, kind) : kind) as PieceKind;
 
 export const parsePuzzles = (lines: string[]) => {
   let puzzle: Puzzle;
@@ -53,21 +71,32 @@ export const parsePuzzles = (lines: string[]) => {
           .split(":")[1]
           .trim()
           .split(/\s+/)
-          .reduce((pieces, posStr) => {
-            const [kind, x, y] = posStr.split(",");
+          .reduce((pieces, pieceStr) => {
+            const [kind, posStr] = pieceStr.split("@");
             const index = kind === "B" ? bCount++ : wCount++;
             const letter = String.fromCharCode(65 + index);
             const id = `${kind === "B" ? "Black" : "White"}${letter}`;
 
-            return {
+            const newPieces: Pieces = {
               ...pieces,
-              [id]: {
+            };
+
+            const positions = posStr.split("+").map(parsePos);
+            const partIds = positions.map((_, i) =>
+              buildMultiId(id, i, positions.length)
+            );
+
+            partIds.forEach((id, i) => {
+              newPieces[id] = {
                 id,
                 letter: letter,
                 kind: kind as PieceKind,
-                pos: [parseInt(x, 10), parseInt(y, 10)],
-              },
-            };
+                pos: positions[i],
+                herdIds: positions.length > 1 ? partIds : undefined,
+              };
+            });
+
+            return newPieces;
           }, {});
       } else if (/^walls:/.test(line)) {
         // walls
@@ -75,15 +104,7 @@ export const parsePuzzles = (lines: string[]) => {
           .split(":")[1]
           .trim()
           .split(/\s+/)
-          .map(
-            (wallStr) =>
-              wallStr
-                .split("|")
-                .map(
-                  (posStr) =>
-                    posStr.split(",").map((num) => parseInt(num, 10)) as Pos
-                ) as Wall
-          );
+          .map((wallStr) => wallStr.split("|").map(parsePos) as Wall);
       } else if (/^optimal:/.test(line)) {
         // optimal moves
         puzzle.optimal = parseInt(line.split(":")[1], 10);

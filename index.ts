@@ -23,7 +23,7 @@ try {
         `${puzzle.no}: solved in ${solution.step}, ${
           !betterFound
             ? `OK${puzzle.fixed ? " (fixed)" : ""}`
-            : `expected ${puzzle.optimal}}`
+            : `expected ${puzzle.optimal}`
         }${
           betterFound || alwaysShowSolution
             ? `\n  steps: ${solution.actions.join(", ")}`
