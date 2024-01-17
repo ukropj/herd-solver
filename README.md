@@ -58,6 +58,7 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
   - `.` - normal empty tile
   - `b` or `w` end tiles for Shepards and Sheep respectively
   - `o` - bump
+  - `u` - hole
 
 Notes
 

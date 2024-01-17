@@ -11,10 +11,14 @@ type State = {
   readonly actions: string[];
 };
 
-const VALID = /^[.bwoBW]$/;
-const EMPTY = /^[.bw]$/;
-const OCCUPIED = /^[oBW]$/;
 const BUMP = /^o$/;
+const HOLE = /^u$/;
+// const CAN_SLIDE_FROM = /^[.bw]$/;
+const CAN_SLIDE_TO = /^[.bwu]$/;
+
+const CAN_JUMP_FROM = /^[.bwoBW]$/;
+const CAN_JUMP_OVER = /^[oBW]$/;
+const CAN_JUMP_TO = /^[.bwouBW]$/;
 
 const DIRS: Dir[] = [
   [1, 0, "▶", "↠"],
@@ -94,7 +98,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
       ({ id, coveredById, pos: [px, py] }) =>
         px === x &&
         py === y &&
-        !coveredById &&
+        (!coveredById || (ignoreIds && ignoreIds.includes(coveredById))) &&
         (!ignoreIds || !ignoreIds.includes(id))
     );
 
@@ -127,21 +131,30 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     dir: Dir,
     piecesArr: Piece[],
     ignoreIds?: string[]
-  ) =>
-    from.every((pos) => {
-      if (BUMP.test(getInPlan(pos))) return false;
-      const to = add(pos, dir);
+  ) => {
+    const tiles = from.map((fromPos) => getInPlan(fromPos));
+    if (
+      tiles.every((tile) => HOLE.test(tile)) ||
+      tiles.some((tile) => BUMP.test(tile))
+    ) {
+      return false; // pinned by a hole or a bump
+    }
+
+    return from.every((fromPos) => {
+      const to = add(fromPos, dir);
       // check if a wall would "slice a moving herd"
       if (
         from.length > 1 &&
         from.some((otherPos) => isWall(add(otherPos, dir), to))
-      )
+      ) {
         return false;
-
+      }
       return (
-        !isWall(pos, to) && EMPTY.test(getInPlan(to, piecesArr, ignoreIds))
+        !isWall(fromPos, to) &&
+        CAN_SLIDE_TO.test(getInPlan(to, piecesArr, ignoreIds))
       );
     });
+  };
 
   const moveSlide = (
     from: Pos,
@@ -166,27 +179,29 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     return moved ? vector : null;
   };
 
-  const canJump = (from: Pos, dir: Dir, piecesArr: Piece[]) => {
+  const canJump = (
+    from: Pos,
+    dir: Dir,
+    piecesArr: Piece[],
+    jumpingId: string
+  ) => {
+    if (!CAN_JUMP_FROM.test(getInPlan(from, piecesArr, [jumpingId])))
+      return false;
+
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
-    // console.log(
-    //   toStr(from),
-    //   dir,
-    //   !isWall(from, jumpOver),
-    //   OCCUPIED.test(getInPlan(jumpOver, piecesArr)),
-    //   !isWall(jumpOver, to),
-    //   VALID.test(getInPlan(to))
-    // );
     return (
       !isWall(from, jumpOver) &&
-      OCCUPIED.test(getInPlan(jumpOver, piecesArr)) &&
+      CAN_JUMP_OVER.test(getInPlan(jumpOver, piecesArr)) &&
       !isWall(jumpOver, to) &&
-      VALID.test(getInPlan(to))
+      CAN_JUMP_TO.test(getInPlan(to))
     );
   };
 
-  const moveJump = (startPos: Pos, dir: Dir, state: State) =>
-    canJump(startPos, dir, state.piecesArr) ? add(add([0, 0], dir), dir) : null;
+  const moveJump = (startPos: Pos, dir: Dir, state: State, jumpingId: string) =>
+    canJump(startPos, dir, state.piecesArr, jumpingId)
+      ? add(add([0, 0], dir), dir)
+      : null;
 
   const getPiecesUnder = ({ coversId }: Piece, pieces: Pieces): Piece[] => {
     if (!coversId) {
@@ -356,7 +371,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
 
             if (isJump) {
               // attempt jump
-              vector = moveJump(startPos, dir, state);
+              vector = moveJump(startPos, dir, state, piece.id);
             } else {
               // attempt slide
               vector = moveSlide(startPos, dir, state, herd);
