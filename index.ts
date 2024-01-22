@@ -26,7 +26,7 @@ try {
             : `expected ${puzzle.optimal}`
         }${
           betterFound || alwaysShowSolution
-            ? `\n  steps: ${solution.actions.join(", ")}`
+            ? `\n  steps: ${solution.actions.join(", ")}\n`
             : ""
         }`
       );

@@ -64,3 +64,7 @@ Notes
 
 - `x` is 0-based horizontal position form left to right
 - `y` is 0-based vertical position from top to down
+
+### Tip
+
+If you are using this to find the optimal number of steps, not just to verify it, inputting a too high `optimal:` may cause the program too run too long, if that happens, try a shorter one (or maybe the puzzle is just very hard).

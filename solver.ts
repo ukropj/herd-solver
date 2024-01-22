@@ -16,7 +16,6 @@ const HOLE = /^u$/;
 // const CAN_SLIDE_FROM = /^[.bw]$/;
 const CAN_SLIDE_TO = /^[.bwu]$/;
 
-const CAN_JUMP_FROM = /^[.bwoBW]$/;
 const CAN_JUMP_OVER = /^[oBW]$/;
 const CAN_JUMP_TO = /^[.bwouBW]$/;
 
@@ -183,10 +182,9 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     from: Pos,
     dir: Dir,
     piecesArr: Piece[],
-    jumpingId: string
+    idUnder?: string
   ) => {
-    if (!CAN_JUMP_FROM.test(getInPlan(from, piecesArr, [jumpingId])))
-      return false;
+    if (!idUnder && HOLE.test(getInPlan(from))) return false;
 
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
@@ -198,8 +196,8 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     );
   };
 
-  const moveJump = (startPos: Pos, dir: Dir, state: State, jumpingId: string) =>
-    canJump(startPos, dir, state.piecesArr, jumpingId)
+  const moveJump = (startPos: Pos, dir: Dir, state: State, idUnder?: string) =>
+    canJump(startPos, dir, state.piecesArr, idUnder)
       ? add(add([0, 0], dir), dir)
       : null;
 
@@ -371,7 +369,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
 
             if (isJump) {
               // attempt jump
-              vector = moveJump(startPos, dir, state, piece.id);
+              vector = moveJump(startPos, dir, state, piece.coversId);
             } else {
               // attempt slide
               vector = moveSlide(startPos, dir, state, herd);
