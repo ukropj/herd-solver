@@ -60,6 +60,17 @@ const parsePlanRow = (planRow: string) => {
   } else throw Error(`Cannot parse plan row string: ${planRow}`);
 };
 
+const isValid = (puzzle: Puzzle) => {
+  if (!puzzle.plan.length) return `Puzzle ${puzzle.no} has no plan`;
+  if (!Object.keys(puzzle.pieces).length)
+    return `Puzzle ${puzzle.no} has no pieces`;
+  if (puzzle.optimal < 1)
+    return `Puzzle ${puzzle.no} has no optimal moves count`;
+  if (!puzzle.plan.some((row) => row.some((tile) => /[bw]/.test(tile))))
+    return `Puzzle ${puzzle.no} has no end tiles`;
+  return true;
+};
+
 export const parsePuzzles = (lines: string[]) => {
   let puzzle: Puzzle;
 
@@ -128,11 +139,16 @@ export const parsePuzzles = (lines: string[]) => {
         puzzle.optimal = parseInt(line.split(":")[1], 10);
         puzzle.fixed = true;
       } else if (line.trim().length === 0) {
+        if (!puzzle.no) return puzzles; // ignore empty line
         // end of puzzle empty line
         const newPuzzle = puzzle;
         reset();
-
-        return [...puzzles, newPuzzle];
+        const result = isValid(newPuzzle);
+        if (result === true) {
+          return [...puzzles, newPuzzle];
+        } else {
+          console.log("Parsing error", result);
+        }
       } else {
         // plan/map row
         puzzle.plan.push(parsePlanRow(line));
