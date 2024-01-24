@@ -20,16 +20,24 @@ Solve all
 npm run start
 ```
 
-Solve specific
+Solve specific (puzzle names need to be quoted)
 
 ```
 npm run start -- '#5' '#12*'
 ```
 
+Solve all starting from a specific puzzle
+
+```
+npm run start -- from '#10'
+```
+
 Normally, solution steps are only printed if a better than optimal path is found, to always print solution steps use `solutions` as a first argument, e.g.
 
 ```
-npm run start -- solutions '#10'
+npm run start -- solutions
+npm run start -- solutions '#10' '#11*'
+npm run start -- solutions from '#10'
 ```
 
 ## Solution syntax
@@ -52,18 +60,20 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
   - walls are separated by any number of spaces
 - a line starting with `optimal:` containing a single number, the optimal number of steps
 - optionally: a line starting with `fixed:` containing a single number, the fixed optimal number of steps
-- an **empty line** (or more) that signifies the end of the puzle entry
+- an **empty line** (or more) that signifies the end of the puzzle entry
+  - don't forget an empy line after the last puzzle!
 - all other lines are parts of the puzzle plan, each character is one tile
   - space - unpassable tile
   - `.` - normal empty tile
   - `b` or `w` end tiles for Shepards and Sheep respectively
   - `o` - bump
   - `u` - hole
+  - `+` - command tile
 
 Notes
 
 - `x` is 0-based horizontal position form left to right
-- `y` is 0-based vertical position from top to down
+- `y` is 0-based vertical position from top to bottom
 
 ### Tip
 

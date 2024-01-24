@@ -4,17 +4,27 @@ import { parsePuzzles } from "./parser";
 import { solvePuzzle } from "./solver";
 
 const args = process.argv.slice(2);
-let alwaysShowSolution = args[0] == "solution";
-const whitelist = alwaysShowSolution ? args.slice(1) : args;
+
+const alwaysShowSolution = /^solutions?$/.test(args[0]);
+if (alwaysShowSolution) args.shift();
+
+const startFrom = args[0] == "from" ? args[1] : undefined;
+
+const whitelist = startFrom ? [] : args;
 
 try {
   const lines = fs.readFileSync("./puzzles.txt", "utf8").split("\n");
   const puzzles = parsePuzzles(lines);
+  let fromFound = false;
 
   puzzles.forEach((puzzle) => {
     if (whitelist.length && !whitelist.includes(puzzle.no)) {
       // console.log(`${puzzle.no}: skipped`);
       return;
+    }
+    if (startFrom) {
+      if (puzzle.no === startFrom) fromFound = true;
+      if (!fromFound) return;
     }
     const solution = solvePuzzle(puzzle);
     if (solution) {

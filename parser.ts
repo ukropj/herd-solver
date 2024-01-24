@@ -1,4 +1,4 @@
-export type TileKind = "." | "b" | "w" | "o" | "u";
+export type TileKind = "." | "b" | "w" | "o" | "u" | "+";
 export type PieceKind = "B" | "W" | "WW" | "WWW";
 export type Pos = [number, number];
 export type Wall = [Pos, Pos];
@@ -55,7 +55,7 @@ const buildMultiId = (id: string, part: number, totalParts: number) =>
   totalParts > 1 ? `${id}:${part + 1}/${totalParts}` : id;
 
 const parsePlanRow = (planRow: string) => {
-  if (/^[ .wbou]+$/.test(planRow)) {
+  if (/^[ .wbou+]+$/.test(planRow)) {
     return planRow.split("") as TileKind[];
   } else throw Error(`Cannot parse plan row string: ${planRow}`);
 };
@@ -123,6 +123,8 @@ export const parsePuzzles = (lines: string[]) => {
                 kind: validateKind(kind, positions.length),
                 pos: positions[i],
                 herdIds: positions.length > 1 ? partIds : undefined,
+                coversId: undefined,
+                coveredById: undefined,
               };
             });
 

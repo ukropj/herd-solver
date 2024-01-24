@@ -11,13 +11,12 @@ type State = {
   readonly actions: string[];
 };
 
-const BUMP = /^o$/;
-const HOLE = /^u$/;
-// const CAN_SLIDE_FROM = /^[.bw]$/;
-const CAN_SLIDE_TO = /^[.bwu]$/;
-
+const BUMP = "o";
+const HOLE = "u";
+const COMMAND = "+";
+const CAN_SLIDE_TO = /^[.bwu+]$/;
 const CAN_JUMP_OVER = /^[oBW]$/;
-const CAN_JUMP_TO = /^[.bwouBW]$/;
+const CAN_JUMP_TO = /^[.bwouBW+]$/;
 
 const DIRS: Dir[] = [
   [1, 0, "▶", "↠"],
@@ -90,10 +89,10 @@ export const solvePuzzle = (puzzle: Puzzle) => {
 
   const getTopPieceInPlan = (
     [x, y]: Pos,
-    piecesArr: Piece[],
+    pieces: Pieces,
     ignoreIds?: string[]
   ) =>
-    piecesArr.find(
+    Object.values(pieces).find(
       ({ id, coveredById, pos: [px, py] }) =>
         px === x &&
         py === y &&
@@ -101,9 +100,8 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         (!ignoreIds || !ignoreIds.includes(id))
     );
 
-  const getInPlan = ([x, y]: Pos, piecesArr?: Piece[], ignoreIds?: string[]) =>
-    (piecesArr ? getTopPieceInPlan([x, y], piecesArr, ignoreIds) : null)
-      ?.kind[0] ??
+  const getInPlan = ([x, y]: Pos, pieces?: Pieces, ignoreIds?: string[]) =>
+    (pieces ? getTopPieceInPlan([x, y], pieces, ignoreIds) : null)?.kind[0] ??
     puzzle.plan[y]?.[x] ??
     " ";
 
@@ -128,13 +126,13 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   const canSlide = (
     from: Pos[],
     dir: Dir,
-    piecesArr: Piece[],
+    pieces: Pieces,
     ignoreIds?: string[]
   ) => {
     const tiles = from.map((fromPos) => getInPlan(fromPos));
     if (
-      tiles.every((tile) => HOLE.test(tile)) ||
-      tiles.some((tile) => BUMP.test(tile))
+      tiles.every((tile) => HOLE === tile) ||
+      tiles.some((tile) => BUMP === tile)
     ) {
       return false; // pinned by a hole or a bump
     }
@@ -150,56 +148,59 @@ export const solvePuzzle = (puzzle: Puzzle) => {
       }
       return (
         !isWall(fromPos, to) &&
-        CAN_SLIDE_TO.test(getInPlan(to, piecesArr, ignoreIds))
+        CAN_SLIDE_TO.test(getInPlan(to, pieces, ignoreIds))
       );
     });
   };
 
-  const moveSlide = (
+  const findSlideVector = (
     from: Pos,
     dir: Dir,
-    state: State,
+    pieces: Pieces,
     herdToCheck?: Piece[]
-  ) => {
+  ): [Pos | null, boolean] => {
     let moved = false;
     let pos: Pos = from;
     let otherPoses = herdToCheck?.map(({ pos }) => pos);
     let ignoreIds = herdToCheck?.flatMap((herdPiece) => [
       herdPiece.id,
-      ...getPiecesAbove(herdPiece, state.pieces).map(({ id }) => id),
+      ...getPiecesAbove(herdPiece, pieces).map(({ id }) => id),
     ]);
+    let onCommand = (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
+
     let vector: Pos = [0, 0];
-    while (canSlide(otherPoses ?? [pos], dir, state.piecesArr, ignoreIds)) {
+    while (canSlide(otherPoses ?? [pos], dir, pieces, ignoreIds)) {
       moved = true;
       vector = add(vector, dir);
       pos = add(pos, dir);
       otherPoses = otherPoses?.map((otherPos) => add(otherPos, dir));
+      onCommand =
+        onCommand ||
+        (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
     }
-    return moved ? vector : null;
+    return moved ? [vector, onCommand] : [null, false];
   };
 
-  const canJump = (
-    from: Pos,
-    dir: Dir,
-    piecesArr: Piece[],
-    idUnder?: string
-  ) => {
-    if (!idUnder && HOLE.test(getInPlan(from))) return false;
+  const canJump = (from: Pos, dir: Dir, pieces: Pieces, idUnder?: string) => {
+    if (!idUnder && HOLE === getInPlan(from)) return false;
 
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
     return (
       !isWall(from, jumpOver) &&
-      CAN_JUMP_OVER.test(getInPlan(jumpOver, piecesArr)) &&
+      CAN_JUMP_OVER.test(getInPlan(jumpOver, pieces)) &&
       !isWall(jumpOver, to) &&
       CAN_JUMP_TO.test(getInPlan(to))
     );
   };
 
-  const moveJump = (startPos: Pos, dir: Dir, state: State, idUnder?: string) =>
-    canJump(startPos, dir, state.piecesArr, idUnder)
-      ? add(add([0, 0], dir), dir)
-      : null;
+  const findMoveVector = (
+    startPos: Pos,
+    dir: Dir,
+    pieces: Pieces,
+    idUnder?: string
+  ) =>
+    canJump(startPos, dir, pieces, idUnder) ? add(add([0, 0], dir), dir) : null;
 
   const getPiecesUnder = ({ coversId }: Piece, pieces: Pieces): Piece[] => {
     if (!coversId) {
@@ -209,6 +210,11 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     return [pieceUnder, ...getPiecesUnder(pieceUnder, pieces)];
   };
 
+  const getHerdPiecesUnder = (piece: Piece, pieces: Pieces) =>
+    getPiecesUnder(piece, pieces)
+      .find(({ herdIds }) => herdIds != null)
+      ?.herdIds?.map((id) => pieces[id]);
+
   const getPiecesAbove = ({ coveredById }: Piece, pieces: Pieces): Piece[] => {
     if (!coveredById) {
       return [];
@@ -217,119 +223,130 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     return [pieceAbove, ...getPiecesAbove(pieceAbove, pieces)];
   };
 
-  const updatePieces = (
-    mainPiece: Piece,
-    vector: Pos,
-    didJump: boolean,
-    preMoveState: State,
-    herd?: Piece[]
+  // TODO this logic is a "little" convoluted, consider refactor
+  const commandPieces = (
+    alreadyMovedPieces: Pieces,
+    dir: Dir,
+    preMoveState: State
   ): Pieces => {
-    LOG && console.log("---------------------------");
-    const mainEndPos = add(mainPiece.pos, vector);
+    // take pieces that did not trigger the command AND are not on top of others
+    // also pick just one from each herd
+    const piecesToMove = preMoveState.piecesArr.filter(
+      ({ id, coversId, herdIds }) =>
+        !alreadyMovedPieces[id] && !coversId && (!herdIds || id === herdIds[0])
+    );
+    let tmpPieces = piecesToMove.reduce(
+      (pieces, piece) => ({
+        ...pieces,
+        [piece.id]: { ...piece },
+      }),
+      {
+        ...preMoveState.pieces,
+        ...alreadyMovedPieces,
+      } as Pieces
+    );
+    let pieceMoved = false;
 
-    const updated: Pieces = {
-      [mainPiece.id]: {
-        ...mainPiece,
-        pos: mainEndPos,
-        coversId: !didJump
-          ? mainPiece.coversId
-          : getTopPieceInPlan(mainEndPos, preMoveState.piecesArr)?.id,
-      },
-    };
-
-    if (didJump) {
-      LOG && console.log(mainPiece.id, "jumped to", toStr(mainEndPos));
-      const toUncoverId = mainPiece.coversId;
-      if (toUncoverId) {
-        LOG &&
-          console.log("  ", toUncoverId, "uncovered at", toStr(mainPiece.pos));
-
-        updated[toUncoverId] = {
-          ...preMoveState.pieces[toUncoverId],
-          coveredById: undefined, // not covered any more
-        };
-      }
-      const toCover = didJump
-        ? getTopPieceInPlan(mainEndPos, preMoveState.piecesArr)
-        : null;
-      if (toCover) {
-        LOG && console.log("  ", toCover.id, "covered at", toStr(mainEndPos));
-
-        updated[toCover.id] = {
-          ...toCover,
-          coveredById: mainPiece.id,
-        };
-      }
-    } else {
-      LOG && console.log(mainPiece.id, "slid to", toStr(mainEndPos));
-      getPiecesUnder(updated[mainPiece.id], preMoveState.pieces).forEach(
-        (toMove) => {
-          LOG && console.log("  ", toMove.id, "slid too to", toStr(mainEndPos));
-
-          updated[toMove.id] = {
-            ...toMove,
-            pos: mainEndPos,
+    // keep sliding pieces until not possible
+    // (so we don't have to compute the optimal order to slide them in)
+    do {
+      pieceMoved = false;
+      piecesToMove.forEach(({ id }) => {
+        const piece = tmpPieces[id];
+        const herd = piece.herdIds?.map((id) => tmpPieces[id]);
+        const [vector] = findSlideVector(piece.pos, dir, tmpPieces, herd);
+        if (vector) {
+          LOG && console.log("Commading", id, dir[2]);
+          pieceMoved = true;
+          tmpPieces = {
+            ...tmpPieces,
+            ...updatePiece(piece, vector, tmpPieces, true, true),
           };
         }
-      );
-      if (herd) {
-        herd.forEach((herdPiece) => {
-          if (updated[herdPiece.id]) return; // already updated
+      });
+    } while (pieceMoved);
 
-          LOG &&
-            console.log(
-              "  ",
-              herdPiece.id,
-              "slid too as part of the herd to",
-              toStr(add(herdPiece.pos, vector))
-            );
-
-          updated[herdPiece.id] = {
-            ...herdPiece,
-            pos: add(herdPiece.pos, vector),
-          };
-          getPiecesAbove(herdPiece, preMoveState.pieces).forEach((toMove) => {
-            if (updated[toMove.id] || mainPiece.id === toMove.id) return; // already updated
-            LOG &&
-              console.log(
-                "  ",
-                toMove.id,
-                "moved on top herd to",
-                toStr(add(toMove.pos, vector))
-              );
-
-            updated[toMove.id] = {
-              ...toMove,
-              pos: add(toMove.pos, vector),
-            };
-          });
-        });
+    return Object.values(tmpPieces).reduce((commandedPieces, piece) => {
+      if (!alreadyMovedPieces[piece.id]) {
+        commandedPieces[piece.id] = piece;
       }
-    }
+      return commandedPieces;
+    }, {} as Pieces);
+  };
 
-    getPiecesAbove(updated[mainPiece.id], preMoveState.pieces).forEach(
-      (toMove) => {
-        LOG &&
-          console.log(
-            "  ",
-            toMove.id,
-            "moved on top of it to",
-            toStr(mainEndPos)
-          );
+  const updatePiece = (
+    mainPiece: Piece,
+    vector: Pos,
+    preMovePieces: Pieces,
+    handleAbove: boolean,
+    handleBelow: boolean,
+    isJump: boolean = false
+  ): Pieces => {
+    //This code assumes that one herd can be never stacked on another herd
+    const piecesToUpdate = mainPiece.herdIds
+      ? mainPiece.herdIds.map((id) => preMovePieces[id])
+      : [mainPiece];
 
-        updated[toMove.id] = {
-          ...toMove,
-          pos: mainEndPos,
-        };
-      }
-    );
+    return piecesToUpdate.reduce((pieces, piece) => {
+      const isSideHerdPiece = piece.id !== mainPiece.id;
+      const pieceOnTargetPos = isJump
+        ? getTopPieceInPlan(add(piece.pos, vector), preMovePieces)
+        : undefined;
 
-    return updated;
+      return {
+        ...pieces,
+        // main piece
+        [piece.id]: {
+          ...piece,
+          pos: add(piece.pos, vector),
+          coversId: isJump ? pieceOnTargetPos?.id : piece.coversId,
+        },
+        // above
+        ...(piece.coveredById && (handleAbove || isSideHerdPiece)
+          ? updatePiece(
+              preMovePieces[piece.coveredById],
+              vector,
+              preMovePieces,
+              true,
+              false
+            )
+          : {}),
+        // below
+        ...(piece.coversId &&
+          (isJump
+            ? {
+                // uncover what was covered
+                [piece.coversId]: {
+                  ...preMovePieces[piece.coversId],
+                  coveredById: undefined,
+                },
+              }
+            : handleBelow || isSideHerdPiece
+            ? updatePiece(
+                preMovePieces[piece.coversId],
+                vector,
+                preMovePieces,
+                false,
+                true
+              )
+            : {})),
+        // cover new one
+        ...(isJump && pieceOnTargetPos
+          ? {
+              [pieceOnTargetPos.id]: {
+                ...pieceOnTargetPos,
+                coveredById: piece.id,
+              },
+            }
+          : {}),
+      };
+    }, {} as Pieces);
   };
 
   const buildAction = (
     movedPiece: Piece,
     didJump: boolean,
+    onCommand: boolean,
     dir: Dir,
     pieces: Pieces
   ) => {
@@ -348,6 +365,9 @@ export const solvePuzzle = (puzzle: Puzzle) => {
       if (other.length) {
         supp = `(with ${other.join(" & ")})`;
       }
+      if (onCommand) {
+        supp += "(cmd)";
+      }
     }
     return `${movedPiece.letter}${didJump ? dir[3] : dir[2]}${supp}`;
   };
@@ -363,26 +383,47 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         DIRS.forEach((dir) => {
           [true, false].forEach((isJump) => {
             let vector: Pos | null = null;
-            const herd = getPiecesUnder(piece, state.pieces)
-              .find(({ herdIds }) => herdIds != null)
-              ?.herdIds?.map((id) => state.pieces[id]);
-
+            let onCommand = false;
             if (isJump) {
               // attempt jump
-              vector = moveJump(startPos, dir, state, piece.coversId);
+              vector = findMoveVector(
+                startPos,
+                dir,
+                state.pieces,
+                piece.coversId
+              );
             } else {
+              const herd = getHerdPiecesUnder(piece, state.pieces);
               // attempt slide
-              vector = moveSlide(startPos, dir, state, herd);
+              [vector, onCommand] = findSlideVector(
+                startPos,
+                dir,
+                state.pieces,
+                herd
+              );
             }
             // console.log(
-            //   toStr(endPos) || "no move",
-            //   buildAction(piece, didJump, dir, state.pieces)
+            //   toStr(vector) || "no move",
+            //   buildAction(piece, isJump, dir, state.pieces)
             // );
 
             if (vector) {
+              const updatedPieces = updatePiece(
+                piece,
+                vector,
+                state.pieces,
+                true,
+                true,
+                isJump
+              );
+              const commandedPieces = onCommand
+                ? commandPieces(updatedPieces, dir, state)
+                : {};
+
               const newPieces = {
                 ...state.pieces,
-                ...updatePieces(piece, vector, isJump, state, herd),
+                ...updatedPieces,
+                ...commandedPieces,
               };
 
               const newState = {
@@ -391,7 +432,13 @@ export const solvePuzzle = (puzzle: Puzzle) => {
                 piecesArr: Object.values(newPieces),
                 actions: [
                   ...state.actions,
-                  buildAction(newPieces[piece.id], isJump, dir, newPieces),
+                  buildAction(
+                    newPieces[piece.id],
+                    isJump,
+                    onCommand,
+                    dir,
+                    newPieces
+                  ),
                 ],
               };
               const hash = stringify(newState.piecesArr);
@@ -402,11 +449,12 @@ export const solvePuzzle = (puzzle: Puzzle) => {
 
                 // console.log(
                 //   newState.step,
-                //   stringify(newState.piecesArr),
+                //   `[${stringify(newState.piecesArr)}]\t`,
                 //   newState.actions.join(" ")
                 // );
                 // console.log(stateMap.length);
               }
+              LOG && console.log("----------------------------");
             }
           });
         });
@@ -415,13 +463,14 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   };
 
   const evaluateNext = (state: State): State | null => {
-    // if (state.step === 3) return null;
+    // if (state.step === 5) return null;
     if (
       state.step <= puzzle.optimal &&
       state.step < solvedSteps &&
       isSolved(state)
     ) {
-      // console.log(state.step, state.actions.join(" "));
+      // console.log("solved", state.step, state.actions.join(" "));
+      // console.log(state.pieces);
       // console.log(
       //   "states",
       //   Object.values(statesMap).length,
@@ -442,5 +491,3 @@ export const solvePuzzle = (puzzle: Puzzle) => {
 
   return evaluateNext(startState);
 };
-
-// 43680
