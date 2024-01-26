@@ -60,8 +60,7 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
   - walls are separated by any number of spaces
 - a line starting with `optimal:` containing a single number, the optimal number of steps
 - optionally: a line starting with `fixed:` containing a single number, the fixed optimal number of steps
-- an **empty line** (or more) that signifies the end of the puzzle entry
-  - don't forget an empy line after the last puzzle!
+- an **empty line** (or more) that signifies the end of the puzzle entry (not needed after the last puzzle)
 - all other lines are parts of the puzzle plan, each character is one tile
   - space - unpassable tile
   - `.` - normal empty tile

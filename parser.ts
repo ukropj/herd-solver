@@ -87,7 +87,7 @@ export const parsePuzzles = (lines: string[]) => {
 
   reset();
 
-  return lines.reduce((puzzles, line, index) => {
+  return lines.reduce((puzzles, line, index, lines) => {
     // console.log(line, { no, plan, pieces, optimal });
     try {
       if (/^#/.test(line)) {
@@ -103,8 +103,8 @@ export const parsePuzzles = (lines: string[]) => {
           .split(/\s+/)
           .reduce((pieces, pieceStr) => {
             const [kind, posStr] = pieceStr.split("@");
-            const index = kind === "B" ? bCount++ : wCount++;
-            const letter = String.fromCharCode(65 + index);
+            const pieceIndex = kind === "B" ? bCount++ : wCount++;
+            const letter = String.fromCharCode(65 + pieceIndex);
             const id = `${kind === "B" ? "Black" : "White"}${letter}`;
 
             const newPieces: Pieces = {
@@ -154,6 +154,14 @@ export const parsePuzzles = (lines: string[]) => {
       } else {
         // plan/map row
         puzzle.plan.push(parsePlanRow(line));
+      }
+      if (index === lines.length - 1 && puzzle.no) {
+        // add last puzzle if pending
+        const newPuzzle = puzzle;
+        const result = isValid(newPuzzle);
+        if (result === true) {
+          return [...puzzles, newPuzzle];
+        }
       }
     } catch (e) {
       console.log(`Parsing error (line ${index})`, e);
