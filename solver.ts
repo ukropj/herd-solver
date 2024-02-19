@@ -66,8 +66,6 @@ const generateWallHashes = ({ walls }: Puzzle) =>
     [to.toString(), from.toString()],
   ]);
 
-const add = ([x, y]: Pos, [dx, dy]: Pos | Dir): Pos => [x + dx, y + dy];
-
 export const solvePuzzle = (puzzle: Puzzle) => {
   let solvedSteps = Infinity;
   const statesMap: Record<string, number> = {}; // pieces string to step
@@ -87,17 +85,42 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   const allowNewState = (hash: string, step: number) =>
     statesMap[hash] == null || statesMap[hash] > step;
 
+  const wrapPos = (pos: Pos): Pos => {
+    // console.log(pos);
+    if (pos[1] < 0) {
+      // console.log(" wrap to", [pos[0], puzzle.pageHeight + pos[1]]);
+      return [pos[0], puzzle.pageHeight + pos[1]];
+    }
+    if (pos[1] > puzzle.pageHeight - 1) {
+      return [pos[0], pos[1] - puzzle.pageHeight];
+    }
+    return pos;
+  };
+
+  const add = ([x, y]: Pos, [dx, dy]: Pos | Dir, dontWrap?: boolean): Pos => {
+    const result: Pos = [x + dx, y + dy];
+    return dontWrap ? result : wrapPos(result);
+  };
+
+  const toInfinity = (n: number) => (n === 0 ? 0 : n * Infinity);
+
   const getTopPieceInPlan = (
     [x, y]: Pos,
     pieces: Pieces,
     ignoreIds?: string[]
   ) =>
     Object.values(pieces).find(
-      ({ id, coveredById, pos: [px, py] }) =>
-        px === x &&
-        py === y &&
-        (!coveredById || (ignoreIds && ignoreIds.includes(coveredById))) &&
-        (!ignoreIds || !ignoreIds.includes(id))
+      ({ id, coveredById, pos: [px, py], infiniteCol }) => {
+        if (infiniteCol) {
+          return x === infiniteCol;
+        }
+        return (
+          px === x &&
+          py === y &&
+          (!coveredById || (ignoreIds && ignoreIds.includes(coveredById))) &&
+          (!ignoreIds || !ignoreIds.includes(id))
+        );
+      }
     );
 
   const getInPlan = ([x, y]: Pos, pieces?: Pieces, ignoreIds?: string[]) =>
@@ -108,10 +131,10 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   const isSolved = ({ pieces, piecesArr }: State) =>
     endTiles.every((tile) =>
       piecesArr.some(
-        ({ kind, coveredById, coversId, pos: [x, y], herdIds }) =>
+        ({ kind, coveredById, coversId, pos: [x, y], herdIds, infiniteCol }) =>
           tile.kind === kind[0].toLowerCase() &&
-          tile.pos[0] === x &&
-          tile.pos[1] === y &&
+          ((tile.pos[0] === x && tile.pos[1] === y) ||
+            tile.pos[0] === infiniteCol) &&
           coveredById == null &&
           coversId == null &&
           (herdIds?.every((id) => pieces[id].coveredById == null) ?? true)
@@ -140,6 +163,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     return from.every((fromPos) => {
       const to = add(fromPos, dir);
       // check if a wall would "slice a moving herd"
+
       if (
         from.length > 1 &&
         from.some((otherPos) => isWall(add(otherPos, dir), to))
@@ -162,21 +186,37 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     let moved = false;
     let pos: Pos = from;
     let otherPoses = herdToCheck?.map(({ pos }) => pos);
-    let ignoreIds = herdToCheck?.flatMap((herdPiece) => [
-      herdPiece.id,
-      ...getPiecesAbove(herdPiece, pieces).map(({ id }) => id),
-    ]);
+
+    const topPiece = getTopPieceInPlan(from, pieces);
+    const ignoreIds = [
+      ...(herdToCheck?.flatMap((herdPiece) => [
+        herdPiece.id,
+        ...getPiecesAbove(herdPiece, pieces).map(({ id }) => id),
+      ]) ?? []),
+    ];
+    if (topPiece) {
+      // ignoring self is relevant for (infinite) vertical traversal
+      ignoreIds.push(
+        topPiece.id,
+        ...getPiecesUnder(topPiece, pieces).map(({ id }) => id)
+      );
+    }
     let onCommand = (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
 
     let vector: Pos = [0, 0];
     while (canSlide(otherPoses ?? [pos], dir, pieces, ignoreIds)) {
       moved = true;
-      vector = add(vector, dir);
+      vector = add(vector, dir, true);
       pos = add(pos, dir);
       otherPoses = otherPoses?.map((otherPos) => add(otherPos, dir));
       onCommand =
         onCommand ||
         (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
+
+      if (toStr(pos) === toStr(from)) {
+        // infinite sliding!
+        return [vector.map(toInfinity) as Pos, onCommand];
+      }
     }
     return moved ? [vector, onCommand] : [null, false];
   };
@@ -194,13 +234,15 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     );
   };
 
-  const findMoveVector = (
+  const findJumpVector = (
     startPos: Pos,
     dir: Dir,
     pieces: Pieces,
     idUnder?: string
   ) =>
-    canJump(startPos, dir, pieces, idUnder) ? add(add([0, 0], dir), dir) : null;
+    canJump(startPos, dir, pieces, idUnder)
+      ? add(add([0, 0], dir, true), dir, true)
+      : null;
 
   const getPiecesUnder = ({ coversId }: Piece, pieces: Pieces): Piece[] => {
     if (!coversId) {
@@ -293,6 +335,12 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         ? getTopPieceInPlan(add(piece.pos, vector), preMovePieces)
         : undefined;
 
+      const infiniteCol = !Number.isFinite(vector[1])
+        ? piece.pos[0]
+        : pieceOnTargetPos?.infiniteCol // jumping onto an infinitely sliding piece makes you slide with it
+        ? pieceOnTargetPos.pos[0]
+        : undefined;
+
       return {
         ...pieces,
         // main piece
@@ -300,6 +348,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
           ...piece,
           pos: add(piece.pos, vector),
           coversId: isJump ? pieceOnTargetPos?.id : piece.coversId,
+          infiniteCol,
         },
         // above
         ...(piece.coveredById && (handleAbove || isSideHerdPiece)
@@ -376,7 +425,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     const nextStates: State[] = [];
     // check every B piece (can move even if covered)
     state.piecesArr
-      .filter(({ kind }) => kind === "B")
+      .filter(({ kind, infiniteCol }) => kind === "B" && !infiniteCol)
       .forEach((piece) => {
         const startPos = piece.pos;
         // check every cardinal direction
@@ -386,7 +435,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
             let onCommand = false;
             if (isJump) {
               // attempt jump
-              vector = findMoveVector(
+              vector = findJumpVector(
                 startPos,
                 dir,
                 state.pieces,
@@ -404,7 +453,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
             }
             // console.log(
             //   toStr(vector) || "no move",
-            //   buildAction(piece, isJump, dir, state.pieces)
+            //   buildAction(piece, isJump, onCommand, dir, state.pieces)
             // );
 
             if (vector) {
@@ -443,6 +492,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
               };
               const hash = stringify(newState.piecesArr);
               // console.log(hash);
+
               if (allowNewState(hash, newState.step)) {
                 statesMap[hash] = newState.step;
                 nextStates.push(newState);

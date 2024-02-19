@@ -55,9 +55,11 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
   - `{type of piece}@{x},{y}`, available tyes are `B` (Shephard) and `W` (Sheep)
     - "herds" have types `WW` and `WWW` and all segments positions need to be specified eg. `WWW@1,2+1,3+2,3`
   - pieces are separated by any number of spaces
-- optionally: a line starting with `walls:` containing pairs of slaces blocked by walls in format
+- optionally: a line starting with `walls:` containing pairs of tiles blocked by walls in format
   - `{x1},{y1}|{x2},{y2}`
   - walls are separated by any number of spaces
+  - to add a wall at the edge of a puzzle (relevant for vertical page traversal) specify it as a wall between the top and bottom tile, e.g. `1,0|1,7` is a wall on top of the 2nd column of a standard height-8 puzzle.
+- optionally: a line starting with `height:` containing a single number, how many tiles fit on the page vertically (relevant for page travesal). **Lowest** allowed height is 3. If not specified, it is assumed the puzzle height is 8.
 - a line starting with `optimal:` containing a single number, the optimal number of steps
 - optionally: a line starting with `fixed:` containing a single number, the fixed optimal number of steps
 - an **empty line** (or more) that signifies the end of the puzzle entry (not needed after the last puzzle)
@@ -73,6 +75,7 @@ Notes
 
 - `x` is 0-based horizontal position form left to right
 - `y` is 0-based vertical position from top to bottom
+- Horizontal page traversal is not supported.
 
 ### Tip
 

@@ -11,6 +11,7 @@ export type Piece = {
   readonly coversId?: string;
   readonly coveredById?: string;
   readonly herdIds?: string[];
+  readonly infiniteCol?: number;
 };
 
 export type Pieces = Record<string, Piece>;
@@ -20,6 +21,7 @@ export type Puzzle = {
   plan: TileKind[][];
   pieces: Pieces;
   walls: Wall[];
+  pageHeight: number;
   optimal: number;
   fixed: boolean;
 };
@@ -80,6 +82,7 @@ export const parsePuzzles = (lines: string[]) => {
       plan: [],
       pieces: {},
       walls: [],
+      pageHeight: 8,
       optimal: 0,
       fixed: false,
     };
@@ -133,6 +136,12 @@ export const parsePuzzles = (lines: string[]) => {
       } else if (/^walls:/.test(line)) {
         // walls
         puzzle.walls = line.split(":")[1].trim().split(/\s+/).map(parseWall);
+      } else if (/^height:/.test(line)) {
+        // walls
+        puzzle.pageHeight = parseInt(line.split(":")[1], 10);
+        if (puzzle.pageHeight < 3) {
+          throw Error("Puzzle height is too low, must be at least 3");
+        }
       } else if (/^optimal:/.test(line)) {
         // optimal moves
         puzzle.optimal = parseInt(line.split(":")[1], 10);
