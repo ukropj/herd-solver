@@ -110,17 +110,11 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     ignoreIds?: string[]
   ) =>
     Object.values(pieces).find(
-      ({ id, coveredById, pos: [px, py], infiniteCol }) => {
-        if (infiniteCol) {
-          return x === infiniteCol;
-        }
-        return (
-          px === x &&
-          py === y &&
-          (!coveredById || (ignoreIds && ignoreIds.includes(coveredById))) &&
-          (!ignoreIds || !ignoreIds.includes(id))
-        );
-      }
+      ({ id, coveredById, pos: [px, py] }) =>
+        px === x &&
+        py === y &&
+        (!coveredById || (ignoreIds && ignoreIds.includes(coveredById))) &&
+        (!ignoreIds || !ignoreIds.includes(id))
     );
 
   const getInPlan = ([x, y]: Pos, pieces?: Pieces, ignoreIds?: string[]) =>
@@ -131,10 +125,10 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   const isSolved = ({ pieces, piecesArr }: State) =>
     endTiles.every((tile) =>
       piecesArr.some(
-        ({ kind, coveredById, coversId, pos: [x, y], herdIds, infiniteCol }) =>
+        ({ kind, coveredById, coversId, pos: [x, y], herdIds }) =>
           tile.kind === kind[0].toLowerCase() &&
-          ((tile.pos[0] === x && tile.pos[1] === y) ||
-            tile.pos[0] === infiniteCol) &&
+          tile.pos[0] === x &&
+          tile.pos[1] === y &&
           coveredById == null &&
           coversId == null &&
           (herdIds?.every((id) => pieces[id].coveredById == null) ?? true)
@@ -195,7 +189,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
       ]) ?? []),
     ];
     if (topPiece) {
-      // ignoring self is relevant for (infinite) vertical traversal
+      // ignoring self is relevant when checking for infinite vertical traversal
       ignoreIds.push(
         topPiece.id,
         ...getPiecesUnder(topPiece, pieces).map(({ id }) => id)
@@ -214,8 +208,8 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
 
       if (toStr(pos) === toStr(from)) {
-        // infinite sliding!
-        return [vector.map(toInfinity) as Pos, onCommand];
+        // would cause infinite sliding!
+        return [null, false];
       }
     }
     return moved ? [vector, onCommand] : [null, false];
@@ -335,12 +329,6 @@ export const solvePuzzle = (puzzle: Puzzle) => {
         ? getTopPieceInPlan(add(piece.pos, vector), preMovePieces)
         : undefined;
 
-      const infiniteCol = !Number.isFinite(vector[1])
-        ? piece.pos[0]
-        : pieceOnTargetPos?.infiniteCol // jumping onto an infinitely sliding piece makes you slide with it
-        ? pieceOnTargetPos.pos[0]
-        : undefined;
-
       return {
         ...pieces,
         // main piece
@@ -348,7 +336,6 @@ export const solvePuzzle = (puzzle: Puzzle) => {
           ...piece,
           pos: add(piece.pos, vector),
           coversId: isJump ? pieceOnTargetPos?.id : piece.coversId,
-          infiniteCol,
         },
         // above
         ...(piece.coveredById && (handleAbove || isSideHerdPiece)
@@ -425,7 +412,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     const nextStates: State[] = [];
     // check every B piece (can move even if covered)
     state.piecesArr
-      .filter(({ kind, infiniteCol }) => kind === "B" && !infiniteCol)
+      .filter(({ kind }) => kind === "B")
       .forEach((piece) => {
         const startPos = piece.pos;
         // check every cardinal direction

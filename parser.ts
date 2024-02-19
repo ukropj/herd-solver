@@ -11,7 +11,6 @@ export type Piece = {
   readonly coversId?: string;
   readonly coveredById?: string;
   readonly herdIds?: string[];
-  readonly infiniteCol?: number;
 };
 
 export type Pieces = Record<string, Piece>;
