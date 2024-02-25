@@ -1,15 +1,6 @@
-import { Piece, Pieces, Pos, Puzzle, TileKind } from "./parser";
+import { Dir, Piece, Pieces, Pos, Puzzle, State, TileKind } from "./types";
 
 const LOG = false;
-
-type Dir = Readonly<[number, number, string, string]>;
-
-type State = {
-  readonly step: number;
-  readonly pieces: Pieces;
-  readonly piecesArr: Piece[];
-  readonly actions: string[];
-};
 
 const BUMP = "o";
 const HOLE = "u";

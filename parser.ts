@@ -1,29 +1,4 @@
-export type TileKind = "." | "b" | "w" | "o" | "u" | "+";
-export type PieceKind = "B" | "W" | "WW" | "WWW";
-export type Pos = [number, number];
-export type Wall = [Pos, Pos];
-
-export type Piece = {
-  readonly id: string;
-  readonly letter: string;
-  readonly kind: PieceKind;
-  readonly pos: Pos;
-  readonly coversId?: string;
-  readonly coveredById?: string;
-  readonly herdIds?: string[];
-};
-
-export type Pieces = Record<string, Piece>;
-
-export type Puzzle = {
-  no: string;
-  plan: TileKind[][];
-  pieces: Pieces;
-  walls: Wall[];
-  pageHeight: number;
-  optimal: number;
-  fixed: boolean;
-};
+import { PieceKind, Pieces, Pos, Puzzle, TileKind, Wall } from "./types";
 
 const validateKind = (pieceKind: string, totalParts: number) => {
   if (
