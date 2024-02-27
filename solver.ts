@@ -58,6 +58,25 @@ const generateWallHashes = ({ walls }: Puzzle) =>
   ]);
 
 export const solvePuzzle = (puzzle: Puzzle) => {
+  if (!puzzle.altPieces) {
+    return _solvePuzzle(puzzle);
+  }
+  const solutions = puzzle.altPieces
+    .map((pieces) => _solvePuzzle({ ...puzzle, pieces }))
+    .filter(Boolean) as State[];
+
+  let lowestStep = puzzle.optimal + 1;
+  let bestSolution = null;
+  solutions.forEach((solution) => {
+    if (solution.step < lowestStep) {
+      lowestStep = solution.step;
+      bestSolution = solution;
+    }
+  });
+  return bestSolution;
+};
+
+const _solvePuzzle = (puzzle: Puzzle) => {
   let solvedSteps = Infinity;
   const statesMap: Record<string, number> = {}; // pieces string to step
 
@@ -70,6 +89,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
     pieces: puzzle.pieces,
     piecesArr: Object.values(puzzle.pieces),
     actions: [],
+    prevState: undefined,
   };
   statesMap[stringify(startState.piecesArr)] = 0;
 
@@ -453,7 +473,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
                 ...commandedPieces,
               };
 
-              const newState = {
+              const newState: State = {
                 step: state.step + 1,
                 pieces: newPieces,
                 piecesArr: Object.values(newPieces),
@@ -467,6 +487,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
                     newPieces
                   ),
                 ],
+                prevState: state,
               };
               const hash = stringify(newState.piecesArr);
               // console.log(hash);

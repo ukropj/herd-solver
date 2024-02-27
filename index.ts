@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 
 import { parsePuzzles } from "./parser";
 import { solvePuzzle } from "./solver";
+// import { render } from "./display";
 
 const args = process.argv.slice(2);
 
@@ -26,6 +27,8 @@ try {
       if (puzzle.no === startFrom) fromFound = true;
       if (!fromFound) return;
     }
+    // render(puzzle);
+
     const solution = solvePuzzle(puzzle);
     if (solution) {
       const betterFound = solution.step < puzzle.optimal;
@@ -40,6 +43,9 @@ try {
             : ""
         }`
       );
+      if (alwaysShowSolution) {
+        // render(puzzle, solution);
+      }
     } else {
       console.log(`${puzzle.no}: NOT solved`);
     }

@@ -1,4 +1,4 @@
-import { PieceKind, Pieces, Pos, Puzzle, TileKind, Wall } from "./types";
+import { Piece, PieceKind, Pieces, Pos, Puzzle, TileKind, Wall } from "./types";
 
 const validateKind = (pieceKind: string, totalParts: number) => {
   if (
@@ -38,13 +38,67 @@ const parsePlanRow = (planRow: string) => {
 
 const isValid = (puzzle: Puzzle) => {
   if (!puzzle.plan.length) return `Puzzle ${puzzle.no} has no plan`;
-  if (!Object.keys(puzzle.pieces).length)
+  if (!Object.keys(puzzle.pieces).length && !puzzle.altPieces?.length)
     return `Puzzle ${puzzle.no} has no pieces`;
   if (puzzle.optimal < 1)
     return `Puzzle ${puzzle.no} has no optimal moves count`;
   if (!puzzle.plan.some((row) => row.some((tile) => /[bw]/.test(tile))))
     return `Puzzle ${puzzle.no} has no end tiles`;
   return true;
+};
+
+const allPairs = (pieces: Piece[]) =>
+  pieces.flatMap((piece, i) =>
+    pieces.slice(i + 1).map((secondPiece) => [piece, secondPiece])
+  );
+
+const buildAternatives = (piecesArr: Piece[], altKind: PieceKind) => {
+  const thePieces = piecesArr.filter(({ kind }) => kind === altKind);
+  const otherPieces = piecesArr.filter(({ kind }) => kind !== altKind);
+
+  return allPairs(thePieces).map((pair) =>
+    [...pair, ...otherPieces].reduce(
+      (pieces, piece) => ({ ...pieces, [piece.id]: piece }),
+      {} as Pieces
+    )
+  );
+};
+
+const checkPieceLimits = (puzzle: Puzzle) => {
+  const piecesArr = Object.values(puzzle.pieces);
+  let alternatives: Pieces[] = [];
+
+  // check shepherds (max 2)
+  const shepherds = piecesArr.filter(({ kind }) => kind === "B");
+  if (shepherds.length > 2) {
+    alternatives = buildAternatives(piecesArr, "B");
+  }
+
+  // check single-sheep (max 2)
+  const sheep = piecesArr.filter(({ kind }) => kind === "W");
+  if (sheep.length > 2) {
+    if (alternatives.length) {
+      alternatives = alternatives.flatMap((altPieces) =>
+        buildAternatives(Object.values(altPieces), "W")
+      );
+    } else {
+      alternatives = buildAternatives(piecesArr, "W");
+    }
+  }
+
+  // ensure stacks are kept
+  alternatives = alternatives.filter((altPieces) =>
+    Object.values(altPieces).every(
+      (piece) =>
+        (!piece.coversId || altPieces[piece.coversId]) &&
+        (!piece.coveredById || altPieces[piece.coveredById])
+    )
+  );
+
+  if (alternatives.length) {
+    puzzle.pieces = {};
+    puzzle.altPieces = alternatives;
+  }
 };
 
 export const parsePuzzles = (lines: string[]) => {
@@ -84,29 +138,47 @@ export const parsePuzzles = (lines: string[]) => {
             const letter = String.fromCharCode(65 + pieceIndex);
             const id = `${kind === "B" ? "Black" : "White"}${letter}`;
 
-            const newPieces: Pieces = {
-              ...pieces,
-            };
-
             const positions = posStr.split("+").map(parsePos);
             const partIds = positions.map((_, i) =>
               buildMultiId(id, i, positions.length)
             );
 
+            const oldPieces = Object.values(pieces);
+
+            const newPieces: Pieces = {
+              ...pieces,
+            };
             partIds.forEach((id, i) => {
+              const pos = positions[i];
+
+              const willCover = oldPieces.find(
+                (piece) =>
+                  !piece.coveredById &&
+                  piece.pos[0] === pos[0] &&
+                  piece.pos[1] === pos[1]
+              );
+
               newPieces[id] = {
                 id,
                 letter: letter,
                 kind: validateKind(kind, positions.length),
-                pos: positions[i],
+                pos,
                 herdIds: positions.length > 1 ? partIds : undefined,
-                coversId: undefined,
+                coversId: willCover?.id,
                 coveredById: undefined,
               };
+              if (willCover) {
+                newPieces[willCover.id] = {
+                  ...willCover,
+                  coveredById: id,
+                };
+              }
             });
 
             return newPieces;
-          }, {});
+          }, {} as Pieces);
+
+        checkPieceLimits(puzzle);
       } else if (/^walls:/.test(line)) {
         // walls
         puzzle.walls = line.split(":")[1].trim().split(/\s+/).map(parseWall);

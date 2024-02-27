@@ -1,4 +1,4 @@
-export type TileKind = "." | "b" | "w" | "o" | "u" | "+";
+export type TileKind = " " | "." | "b" | "w" | "o" | "u" | "+";
 export type PieceKind = "B" | "W" | "WW" | "WWW";
 export type Pos = [number, number];
 export type Wall = [Pos, Pos];
@@ -19,6 +19,7 @@ export type Puzzle = {
   no: string;
   plan: TileKind[][];
   pieces: Pieces;
+  altPieces?: Pieces[];
   walls: Wall[];
   pageHeight: number;
   optimal: number;
@@ -32,4 +33,5 @@ export type State = {
   readonly pieces: Pieces;
   readonly piecesArr: Piece[];
   readonly actions: string[];
+  readonly prevState: State | undefined;
 };
