@@ -59,21 +59,27 @@ const generateWallHashes = ({ walls }: Puzzle) =>
 
 export const solvePuzzle = (puzzle: Puzzle) => {
   if (!puzzle.altPieces) {
-    return _solvePuzzle(puzzle);
+    const solution = _solvePuzzle(puzzle);
+    return solution ? { solution, pieces: puzzle.pieces } : null;
   }
-  const solutions = puzzle.altPieces
-    .map((pieces) => _solvePuzzle({ ...puzzle, pieces }))
-    .filter(Boolean) as State[];
+  const solutions = puzzle.altPieces.map((pieces) =>
+    _solvePuzzle({ ...puzzle, pieces })
+  );
 
   let lowestStep = puzzle.optimal + 1;
-  let bestSolution = null;
-  solutions.forEach((solution) => {
-    if (solution.step < lowestStep) {
+  let bestSolutionIndex = null;
+  solutions.forEach((solution, i) => {
+    if (solution?.step && solution.step < lowestStep) {
       lowestStep = solution.step;
-      bestSolution = solution;
+      bestSolutionIndex = i;
     }
   });
-  return bestSolution;
+  return bestSolutionIndex != null
+    ? {
+        solution: solutions[bestSolutionIndex] as State,
+        pieces: puzzle.altPieces[bestSolutionIndex],
+      }
+    : null;
 };
 
 const _solvePuzzle = (puzzle: Puzzle) => {
