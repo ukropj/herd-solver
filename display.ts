@@ -24,20 +24,27 @@ const shephard = (ch: string) => `\x1b[1m\x1b[32m${ch}\x1b[0m`;
 const bgShephard = (ch: string) => `\x1b[42m${ch}\x1b[0m`;
 const sheep = (ch: string) => `\x1b[1m\x1b[37m${ch}\x1b[0m`;
 const bgSheep = (ch: string) => `\x1b[47m${ch}\x1b[0m`;
-const red = (ch: string) => `\x1b[31m${ch}\x1b[0m`;
+
+const wall = (ch: string) => `\x1b[31m${ch}\x1b[0m`;
+
+const bgHole = (ch: string) => `\x1b[43m${ch}\x1b[0m`;
+const bgBump = (ch: string) => `\x1b[100m${ch}\x1b[0m`;
 
 const getPieces = (pieces: Piece[], tile: TileKind) => {
   if (pieces.length === 0) return undefined;
   const kind = pieces[0].kind[0];
 
   let ch = "";
+  let fg: (ch: string) => string = (ch) => ch;
   switch (kind) {
     case "B":
-      ch = shephard(pieces[0].letter);
+      ch = pieces[0].letter;
+      fg = shephard;
       // ch = "\x1b[30m●\x1b[0m"; //"◯";
       break;
     case "W":
-      ch = sheep("S");
+      ch = "S";
+      fg = sheep;
       break;
   }
   if (pieces.length > 1) {
@@ -47,17 +54,21 @@ const getPieces = (pieces: Piece[], tile: TileKind) => {
   switch (tile) {
     case "b":
       if (kind === "B") {
-        return bgShephard(black(pieces[0].letter));
+        return bgShephard(black(ch));
       }
-      return bgShephard(ch);
+      return bgShephard(fg(ch));
     case "w":
       if (kind === "W") {
-        return bgSheep(black("S"));
+        return bgSheep(black(ch));
       }
       // if (kind === "W") return bgSheep("\x1b[7m□\x1b[0m"); // ◯
-      return bgSheep(ch);
+      return bgSheep(fg(ch));
+    case "o":
+      return bgBump(fg(ch));
+    case "u":
+      return bgHole(fg(ch));
     default:
-      return bg(ch);
+      return bg(fg(ch));
   }
 };
 
@@ -67,15 +78,15 @@ const getTileContent = (tile: TileKind) => {
     case ".":
       return bg(" ");
     case "+":
-      return bg("\x1b[34m+\x1b[0m");
+      return bg("\x1b[1m\x1b[34m+\x1b[0m");
     case "b":
       return bgShephard(" ");
     case "w":
       return bgSheep(" ");
     case "o":
-      return bg("\x1b[90m▲\x1b[0m");
+      return bgBump(black("▲"));
     case "u":
-      return bg(red("×")); //"▢";
+      return bgHole(black("×"));
     default:
       return tile;
   }
@@ -86,6 +97,10 @@ const getTileSideContent = (tile: TileKind) => {
       return bgShephard(" ");
     case "w":
       return bgSheep(" ");
+    case "o":
+      return bgBump(" ");
+    case "u":
+      return bgHole(" ");
     default:
       return bg(" ");
   }
@@ -123,7 +138,7 @@ const getTop = (
 ) => {
   if (!hasCenter && !hasTop) return " ";
   if (hasTopWall) {
-    return red(hasTopHerd && !isSide ? "╪" : "═");
+    return wall(hasTopHerd && !isSide ? "╪" : "═");
   } else {
     return hasTopHerd && !isSide ? "╂" : "─";
   }
@@ -131,7 +146,7 @@ const getTop = (
 const getLeft = ({ hasCenter, hasLeft, hasLeftWall, hasLeftHerd }: Ctx) => {
   if (!hasCenter && !hasLeft) return " ";
   if (hasLeftWall) {
-    return red(hasLeftHerd ? "╫" : "║");
+    return wall(hasLeftHerd ? "╫" : "║");
   } else {
     return hasLeftHerd ? "┿" : "│";
   }
