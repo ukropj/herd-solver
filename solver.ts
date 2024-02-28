@@ -19,7 +19,7 @@ const DIRS: Dir[] = [
 export const comparePieces = (p1: Piece, p2: Piece) =>
   p1.id.localeCompare(p2.id);
 
-const toStr = (pos?: Pos | null) => pos?.join(",") ?? "";
+export const toStr = (pos?: Pos | null) => pos?.join(",") ?? "";
 
 const stringify = (piecesArr: Piece[]) =>
   piecesArr
@@ -51,11 +51,21 @@ const findEndTiles = ({ plan }: Puzzle) => {
   return endTiles;
 };
 
-const generateWallHashes = ({ walls }: Puzzle) =>
+export const generateWallHashes = ({ walls }: Puzzle) =>
   walls.flatMap(([from, to]) => [
     [from.toString(), to.toString()],
     [to.toString(), from.toString()],
   ]);
+
+export const wrapPos = ({ pageHeight }: Puzzle, pos: Pos): Pos => {
+  if (pos[1] < 0) {
+    return [pos[0], pageHeight + pos[1]];
+  }
+  if (pos[1] > pageHeight - 1) {
+    return [pos[0], pos[1] - pageHeight];
+  }
+  return pos;
+};
 
 export const solvePuzzle = (puzzle: Puzzle) => {
   if (!puzzle.altPieces) {
@@ -102,21 +112,9 @@ const _solvePuzzle = (puzzle: Puzzle) => {
   const allowNewState = (hash: string, step: number) =>
     statesMap[hash] == null || statesMap[hash] > step;
 
-  const wrapPos = (pos: Pos): Pos => {
-    // console.log(pos);
-    if (pos[1] < 0) {
-      // console.log(" wrap to", [pos[0], puzzle.pageHeight + pos[1]]);
-      return [pos[0], puzzle.pageHeight + pos[1]];
-    }
-    if (pos[1] > puzzle.pageHeight - 1) {
-      return [pos[0], pos[1] - puzzle.pageHeight];
-    }
-    return pos;
-  };
-
   const add = ([x, y]: Pos, [dx, dy]: Pos | Dir, dontWrap?: boolean): Pos => {
     const result: Pos = [x + dx, y + dy];
-    return dontWrap ? result : wrapPos(result);
+    return dontWrap ? result : wrapPos(puzzle, result);
   };
 
   const toInfinity = (n: number) => (n === 0 ? 0 : n * Infinity);
@@ -408,15 +406,15 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     let supp = "";
     if (didJump) {
       if (above.length) {
-        supp = `(with ${above.join(" & ")})`;
+        supp = `(& ${above.join(" & ")})`;
       }
       if (under.length) {
-        supp = `(onto ${under.join(" & ")})`;
+        supp = `(to ${under.join(" & ")})`;
       }
     } else {
       const other = [...under, ...above];
       if (other.length) {
-        supp = `(with ${other.join(" & ")})`;
+        supp = `(& ${other.join(" & ")})`;
       }
       if (onCommand) {
         supp += "(cmd)";

@@ -417,7 +417,7 @@ pieces: W@5,0 WW@3,2+4,2 B@4,4 B@5,4
 optimal: 42
 fixed: 10
 
-#CTIle-funny
+#CTile-funny
  .w.
 .u.u.
 u.u.u

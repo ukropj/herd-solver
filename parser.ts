@@ -136,7 +136,7 @@ export const parsePuzzles = (lines: string[]) => {
             const [kind, posStr] = pieceStr.split("@");
             const pieceIndex = kind === "B" ? bCount++ : wCount++;
             const letter = String.fromCharCode(65 + pieceIndex);
-            const id = `${kind === "B" ? "Black" : "White"}${letter}`;
+            const id = `${kind === "B" ? "B~" : "W~"}${letter}`;
 
             const positions = posStr.split("+").map(parsePos);
             const partIds = positions.map((_, i) =>

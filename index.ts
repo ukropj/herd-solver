@@ -3,16 +3,38 @@ import * as fs from "node:fs";
 import { parsePuzzles } from "./parser";
 import { solvePuzzle } from "./solver";
 import { Pieces } from "./types";
-// import { render } from "./display";
+import { render } from "./display";
 
 const args = process.argv.slice(2);
 
-const alwaysShowSolution = /^solutions?$/.test(args[0]);
-if (alwaysShowSolution) args.shift();
+let alwaysShowSolution = false;
+let visualize = false;
+let startFrom: string | undefined = undefined;
+let whitelist: string[] = [];
 
-const startFrom = args[0] == "from" ? args[1] : undefined;
-
-const whitelist = startFrom ? [] : args;
+let arg = args.shift();
+while (arg) {
+  switch (arg) {
+    case "-s":
+    case "solution":
+    case "solutions":
+      alwaysShowSolution = true;
+      break;
+    case "-v":
+    case "visual":
+      visualize = true;
+      break;
+    case "from":
+      startFrom = args.shift();
+      break;
+    default:
+      if (!startFrom) {
+        whitelist.push(arg);
+      }
+      break;
+  }
+  arg = args.shift();
+}
 
 const formatPieces = (pieces: Pieces) =>
   `\n  pieces: ${Object.values(pieces)
@@ -33,7 +55,6 @@ try {
       if (puzzle.no === startFrom) fromFound = true;
       if (!fromFound) return;
     }
-    // render(puzzle);
 
     const solutionAndPieces = solvePuzzle(puzzle);
     if (solutionAndPieces) {
@@ -52,10 +73,16 @@ try {
             : ""
         }`
       );
-      if (alwaysShowSolution) {
-        // render(puzzle, solution);
+      if (visualize) {
+        render(puzzle);
+      }
+      if ((betterFound || alwaysShowSolution) && visualize) {
+        render(puzzle, solution);
       }
     } else {
+      if (visualize) {
+        render(puzzle);
+      }
       console.log(`${puzzle.no}: NOT solved`);
     }
   });

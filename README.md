@@ -32,19 +32,21 @@ Solve all starting from a specific puzzle
 npm run start -- from '#10'
 ```
 
-Normally, solution steps are only printed if a better than optimal path is found, to always print solution steps use `solutions` as a first argument, e.g.
+Normally, solution steps are only printed if a better than optimal path is found, to always print solution steps use `solutions` or `-s`` as a first argument, e.g.
 
 ```
 npm run start -- solutions
 npm run start -- solutions '#10' '#11*'
-npm run start -- solutions from '#10'
+npm run start -- -s from '#10'
 ```
+
+If you want to see a visual solution as well use `visual` or `-v`.
 
 ## Solution syntax
 
 - `A▶` means that Shephard 'A' slides left ('A' is the top-left most one, the other one, if present, is 'B')
 - `A↠` means that Shephard 'A' jumps left
-- the info in parentheses is just suplementary info to note what pieces are now cevered (e.g. `(onto WhiteA)`) or moved as well (e.g. `(with BlackB & WhiteB)`)
+- the info in parentheses is just suplementary info to note what pieces are now cevered (e.g. `(to W~A)`) or moved as well (e.g. `(& B~B & W~B)`)
 
 ## Input
 
