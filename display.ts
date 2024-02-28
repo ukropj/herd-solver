@@ -22,7 +22,7 @@ const black = (ch: string) => `\x1b[30m${ch}\x1b[0m`;
 const bg = (ch: string) => ch; //`\x1b[47m${ch}\x1b[0m`;
 const shephard = (ch: string) => `\x1b[1m\x1b[32m${ch}\x1b[0m`;
 const bgShephard = (ch: string) => `\x1b[42m${ch}\x1b[0m`;
-const sheep = (ch: string) => `\x1b[37m${ch}\x1b[0m`;
+const sheep = (ch: string) => `\x1b[1m\x1b[37m${ch}\x1b[0m`;
 const bgSheep = (ch: string) => `\x1b[47m${ch}\x1b[0m`;
 const red = (ch: string) => `\x1b[31m${ch}\x1b[0m`;
 
