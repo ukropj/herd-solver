@@ -36,7 +36,7 @@ const getPieces = (pieces: Piece[], tile: TileKind) => {
       // ch = "\x1b[30m●\x1b[0m"; //"◯";
       break;
     case "W":
-      ch = sheep("●");
+      ch = sheep("S");
       break;
   }
   if (pieces.length > 1) {
@@ -47,7 +47,7 @@ const getPieces = (pieces: Piece[], tile: TileKind) => {
     case "b":
       return bgShephard(ch);
     case "w":
-      if (kind === "W") return bgSheep("◯");
+      // if (kind === "W") return bgSheep("\x1b[7m□\x1b[0m"); // ◯
       return bgSheep(ch);
     default:
       return bg(ch);
