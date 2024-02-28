@@ -17,6 +17,7 @@ type Ctx = {
 const isVoid = (ch: string | undefined) => !ch || ch === " ";
 
 const stack = (ch: string) => `\x1b[4m${ch}\x1b[0m`;
+const black = (ch: string) => `\x1b[30m${ch}\x1b[0m`;
 
 const bg = (ch: string) => ch; //`\x1b[47m${ch}\x1b[0m`;
 const shephard = (ch: string) => `\x1b[1m\x1b[32m${ch}\x1b[0m`;
@@ -45,8 +46,14 @@ const getPieces = (pieces: Piece[], tile: TileKind) => {
 
   switch (tile) {
     case "b":
+      if (kind === "B") {
+        return bgShephard(black(pieces[0].letter));
+      }
       return bgShephard(ch);
     case "w":
+      if (kind === "W") {
+        return bgSheep(black("S"));
+      }
       // if (kind === "W") return bgSheep("\x1b[7m□\x1b[0m"); // ◯
       return bgSheep(ch);
     default:
