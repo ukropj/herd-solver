@@ -43,21 +43,18 @@ pieces: B@0,5 B@1,5
 optimal: 4
 
 #5
-.....
-.....b
-.....
- ....
-  ..
-pieces: B@4,3 W@2,2
-optimal: 10
+......
+ ...
+ ..bb.
+ ..
+ .
+pieces: B@4,0 B@5,0
+optimal: 11
 
 #6
-.
-w
-.
-...
-pieces: B@0,0 B@0,3 W@2,3
-optimal: 9
+...w
+pieces: B@0,0 B@2,0 W@1,0
+optimal: 7
 
 #7
 ..b.
@@ -73,8 +70,7 @@ bb
 ...
 ..
 pieces: W@1,1 B@0,2 W@1,2 B@2,2
-optimal: 19
-fixed: 17
+optimal: 17
 
 #9
  .
@@ -90,8 +86,7 @@ optimal: 23
 wwbb
 ..
 pieces: B@0,0 B@0,1 W@1,1 W@0,2
-optimal: 19
-fixed: 13
+optimal: 13
 
 #11*
 .w.
@@ -106,8 +101,7 @@ w...
 .w..
 ....
 pieces: B@0,0 W@4,1 W@1,2 B@0,3
-optimal: 31
-fixed: 29
+optimal: 29
 
 #13
 ....
@@ -160,8 +154,7 @@ bboo.
 ...
 pieces: W@4,0 B@2,3 B@4,3
 walls: 0,0|0,1 1,0|1,1  2,0|2,1
-optimal: 33
-fixed: 28
+optimal: 28
 
 #19*
 w...
@@ -171,8 +164,7 @@ b...
  b
 pieces: B@1,0 W@2,0 W@3,0 B@0,3
 walls: 1,0|1,1 3,1|3,2
-optimal: 36
-fixed: 31
+optimal: 31
 
 #20*
  .....
@@ -183,8 +175,7 @@ fixed: 31
 ..o..
 pieces: B@1,0 B@2,1 W@4,2 W@1,4
 walls: 2,2|2,3 4,3|4,4 3,4|4,4
-optimal: 45
-fixed: 40
+optimal: 40
 
 #21
  .b
@@ -210,8 +201,7 @@ w...
  ..
 pieces: W@3,0 B@2,1 B@3,2 WWW@1,2+1,3+2,3
 walls: 1,0|1,1
-optimal: 18
-fixed: 16
+optimal: 16
 
 #24
 .
@@ -238,8 +228,7 @@ optimal: 25
 ....
 pieces: B@0,1 W@3,2 WWW@0,2+1,2+1,3 W@0,3 B@2,3
 walls: 1,0|2,0 3,1|3,2
-optimal: 28
-fixed: 25
+optimal: 25
 
 #27
      .
@@ -284,31 +273,78 @@ optimal: 36
  ..
 pieces: B@2,1 W@4,1 WWW@0,2+1,2+1,3
 walls: 1,1|2,1 1,1|1,2
-optimal: 50
-fixed: 49
+optimal: 49
 
 #32
-..
-..
-..uub
-pieces: W@0,0 W@1,0 B@0,1 B@1,2
-optimal: 16
-fixed: 8
+buu.
+ .u.
+ ...
+pieces: B@1,2 B@2,2 W@3,1 W@3,2
+optimal: 15
 
 #33
-uuuuuuu
-u.....uu
-u.....u
-uu....u
-u.....uu
-u..u..uu
-uuubuu
-pieces: B@1,4 B@3,4
-walls: 0,1|1,1 4,1|4,2 1,2|1,3 5,2|6,2 2,3|2,4 3,3|4,3
-optimal: 16
-fixed: 15
+uu.u
+...u
+....u
+ ...u
+ .. b
+pieces: WW@1,2+1,3 W@3,3 B@1,4
+optimal: 23
 
-#chill
+#34
+....
+....
+....
+uuuu
+.ubu
+..b.
+pieces: WWW@2,1+3,1+3,2 B@3,0 B@2,2
+walls: 0,3|1,3 
+optimal: 13
+
+#35
+uwb.
+uuuu
+....
+.w..
+....
+  ..
+pieces: B@2,5 B@3,5 WW@2,0+2,1 W@3,4
+optimal: 25
+
+#36
+  ...
+ ....
+bwo..
+.....
+.ou.
+ ...
+pieces: WW@2,0+2,1 B@4,2 B@4,3 W@0,4
+walls: 0,2|0,3 1,2|1,3 2,2|2,3 2,4|3,4
+optimal: 46
+
+#37
+......
+..w.o.
+ouuuo.
+uu..o.
+.b....
+ ..o..
+pieces: WW@1,0+2,0 W@4,0 W@2,5 B@5,5
+walls: 3,0|4,0 3,1|4,1 1,3|1,4
+optimal: 37
+
+#38
+u....
+u....
+u....
+o ...
+b
+pieces: B@1,0 B@1,1 W@4,0 WWW@2,0+3,0+3,1
+walls: 2,0|2,1 2,1|3,1 0,2|1,2
+optimal: 26
+
+#39
   u.
 buwu.u
 uwu.u.
@@ -317,43 +353,63 @@ u.u.u.
 .u.u.u
 pieces: WW@1,2+1,3 WWW@2,2+3,2+3,3 B@3,4
 walls: 4,2|4,3
-optimal: 21
-fixed: 19
+optimal: 19
 
-#71
-......
-w.....
-......
-......
+#40*
+ ..b..
+ .uu..
+w.uub
+ ...u
+  ..
+pieces: B@1,0 B@4,0 WWW@2,0+3,0+3,1 WW@1,1+2,1
+walls: 1,1|1,2
+optimal: 33
+
+#41*
  .....
-  ...
-pieces: W@5,0 B@3,3 WWW@4,3+3,4+4,4
-walls: 2,0|3,0 0,1|1,1 4,1|5,1 3,1|3,2 4,1|4,2 3,3|4,3
-optimal: 76
-fixed: 72
+ .....
+ .uu..
+ u.uu.
+ uu.uw
+.uuubb
+pieces: B@0,5 B@4,2 WW@2,0+2,1 W@3,1 WWW@4,1+5,0+5,1
+walls: 4,4|5,4
+optimal: 41
 
-#CTile-intro1
+#42
 +..
 ....
    w
 pieces: B@0,1 W@1,1
 optimal: 8
 
-#CTile-intro2
-.+.w
- ...
-  ..
-pieces: B@1,1 W@2,1
-optimal: 9
-
-#CTile-tunnel
+#43
 .w+...
   ...b
 pieces: B@1,0 W@0,0 W@2,1
 optimal: 14
 
+#44
+.o...
+.u..+
+.uuuu
+.u...
+ uw..
+pieces: B@2,0 B@3,0 W@0,2 W@3,4
+walls: 2,1|2,2
+optimal: 14
 
-#CTile-blockingpath
+#45
+ ..
+ o.u
+..+..
+  u..
+    b
+pieces: B@1,0 B@2,0 W@4,4
+walls: 2,2|3,2
+optimal: 21
+
+#46
     b
 ..ooo
 o...u
@@ -364,112 +420,65 @@ pieces: B@2,1 WW@2,2+2,3 W@3,5
 walls: 3,1|4,1 0,3|0,4
 optimal: 20
 
-#CTile-guidesheepremote
-.o...
-.u..+
-.uuuu
-.u...
- uw..
-pieces: B@2,0 B@3,0 W@0,2 W@3,4
-walls: 2,1|2,2
-optimal: 15
-fixed: 14
+#47
+u....+
+.owu..
+...u..
+..u.u.
+.uuuu.
+.. buu
+pieces: B@5,3 B@5,4 W@0,4 WW@3,3+3,4
+walls: 1,3|2,3 2,1|3,1 2,2|3,2 3,1|4,1 4,2|4,3
+optimal: 43
 
-#CTile-doubleshepherdbridge
- ..
- o.u
-..+..
-  u..
-    b
-pieces: B@1,0 B@2,0 W@4,4
-walls: 2,2|3,2
+#48
+   w
+  ...
+ ..u.
+...u..
+  ubu.
+   +..
+pieces: WW@1,2+2,2 WWW@3,2+3,3+4,3 B@4,1
+walls: 4,4|4,5
 optimal: 26
-fixed: 21
 
-#CTile-slidiiiing
-...
-..+w
-..bww
-...
-pieces: W@0,2 WWW@0,1+1,1+1,2 WW@0,3+1,3 B@2,3
-optimal: 38
-fixed: 10
+#49*
+.+uuub
+..u.u.
+..u..u
+...uuu
+pieces: WW@0,1+0,2 B@0,3 WWW@1,2+2,2+2,3
+walls: 2,1|2,2 5,0|5,1
+optimal: 23
 
-#CTile-notsureaboutthisone
- ....
- ....
- ....
-+..u+
-wb..u
-pieces: B@1,0 WWW@1,1+1,2+2,1 W@4,1
-optimal: 50
-fixed: 17
+#50*
+...+
+....
+ .b.
+ ww
+  w
+pieces: W@1,0 WWW@1,1+2,0+2,1 WW@0,0+0,1 B@3,2
+optimal: 40
 
-#CTile-bridge
-......
-..uuu
- .uwub
- ouuu
-.+....
-..
- u
-pieces: W@5,0 WW@3,2+4,2 B@4,4 B@5,4
-optimal: 42
-fixed: 10
-
-#CTile-funny
- .w.
-.u.u.
-u.u.u
-.ubu.
-.....
-.o..
-  +
-pieces: WWW@0,2+0,3+1,3 B@2,3 WW@3,3+4,3
-walls: 0,3|0,4
-optimal: 50
-fixed: 19
-
-#page-traversal-test
-     .    o
-     .    ..b
-     .    u
-......    u
-      .....
-      .   .
-     ..   .
-     .    .
-pieces: B@0,3
-optimal: 8
-
-#page-traversal-small
-.
-b
-.
-pieces: B@0,0
-walls: 0,0|0,1
-optimal: 1
-height: 3
-
-#page-traversal-top-wall
-..
-b.
-.
-pieces: B@0,0
-walls: 0,0|0,1 0,0|0,2
-optimal: 3
-height: 3
-
-#page-traversal-infinite
-.
-...
-. b
-.
-pieces: B@0,1
-optimal: 2
-height: 4
+#52
+  ....
+  ....
+  ....
+...o.oo.b
+  .wo.
+  ....
+  ....
+  ....
+pieces: B@2,3 W@2,2 W@4,3
+walls: 2,2|2,3 2,3|2,4 5,2|5,3 5,3|5,4
+optimal: 29
 
 #56
 .wo..ob.
 pieces: W@1,0 B@1,0 W@4,0 W@3,0 
 optimal: 3
+
+
+
+
+
