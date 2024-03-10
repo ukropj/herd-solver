@@ -278,11 +278,11 @@ const _solvePuzzle = (puzzle: Puzzle) => {
   const commandPieces = (
     alreadyMovedPieces: Pieces,
     dir: Dir,
-    preMoveState: State
-  ): Pieces => {
+    preMoveState: Pick<State, "pieces">
+  ): [Pieces, boolean] => {
     // take pieces that did not trigger the command AND are not on top of others
     // also pick just one from each herd
-    const piecesToMove = preMoveState.piecesArr.filter(
+    const piecesToMove = Object.values(preMoveState.pieces).filter(
       ({ id, coversId, herdIds }) =>
         !alreadyMovedPieces[id] && !coversId && (!herdIds || id === herdIds[0])
     );
@@ -297,6 +297,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
       } as Pieces
     );
     let pieceMoved = false;
+    let anotherCommand = false; // this could trigger another command
 
     // keep sliding pieces until not possible
     // (so we don't have to compute the optimal order to slide them in)
@@ -305,7 +306,12 @@ const _solvePuzzle = (puzzle: Puzzle) => {
       piecesToMove.forEach(({ id }) => {
         const piece = tmpPieces[id];
         const herd = piece.herdIds?.map((id) => tmpPieces[id]);
-        const [vector] = findSlideVector(piece.pos, dir, tmpPieces, herd);
+        const [vector, command] = findSlideVector(
+          piece.pos,
+          dir,
+          tmpPieces,
+          herd
+        );
         if (vector) {
           LOG && console.log("Commading", id, dir[2]);
           pieceMoved = true;
@@ -314,15 +320,19 @@ const _solvePuzzle = (puzzle: Puzzle) => {
             ...updatePiece(piece, vector, tmpPieces, true, true),
           };
         }
+        anotherCommand = anotherCommand || command;
       });
     } while (pieceMoved);
 
-    return Object.values(tmpPieces).reduce((commandedPieces, piece) => {
-      if (!alreadyMovedPieces[piece.id]) {
-        commandedPieces[piece.id] = piece;
-      }
-      return commandedPieces;
-    }, {} as Pieces);
+    return [
+      Object.values(tmpPieces).reduce((commandedPieces, piece) => {
+        if (!alreadyMovedPieces[piece.id]) {
+          commandedPieces[piece.id] = piece;
+        }
+        return commandedPieces;
+      }, {} as Pieces),
+      anotherCommand,
+    ];
   };
 
   const updatePiece = (
@@ -459,7 +469,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
             // );
 
             if (vector) {
-              const updatedPieces = updatePiece(
+              let updatedPieces = updatePiece(
                 piece,
                 vector,
                 state.pieces,
@@ -467,15 +477,33 @@ const _solvePuzzle = (puzzle: Puzzle) => {
                 true,
                 isJump
               );
-              const commandedPieces = onCommand
-                ? commandPieces(updatedPieces, dir, state)
-                : {};
 
-              const newPieces = {
+              let newPieces = {
                 ...state.pieces,
                 ...updatedPieces,
-                ...commandedPieces,
               };
+
+              let i = 0;
+              while (onCommand) {
+                const [commandedPieces, anotherCommand] = onCommand
+                  ? commandPieces(updatedPieces, dir, { pieces: newPieces })
+                  : [{}, false];
+
+                newPieces = {
+                  ...newPieces,
+                  ...commandedPieces,
+                };
+                if (!anotherCommand) {
+                  break;
+                } else {
+                  i++;
+                  updatedPieces = commandedPieces;
+                }
+                if (i > 10) {
+                  // assume endless loop, abandon the state.
+                  return;
+                }
+              }
 
               const newState: State = {
                 step: state.step + 1,
