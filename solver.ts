@@ -193,7 +193,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     dir: Dir,
     pieces: Pieces,
     herdToCheck?: Piece[]
-  ): [Pos | null, boolean] => {
+  ): [Pos | null, boolean, boolean] => {
     let moved = false;
     let pos: Pos = from;
     let otherPoses = herdToCheck?.map(({ pos }) => pos);
@@ -234,13 +234,13 @@ const _solvePuzzle = (puzzle: Puzzle) => {
 
       if (toStr(pos) === toStr(from)) {
         // would cause infinite sliding!
-        return [null, false];
+        return [null, false, true];
       }
       if (getInPlan(pos) === DEATH) {
-        return [null, false];
+        return [null, false, true];
       }
     }
-    return moved ? [vector, onCommand] : [null, false];
+    return moved ? [vector, onCommand, false] : [null, false, false];
   };
 
   const canJump = (from: Pos, dir: Dir, pieces: Pieces, idUnder?: string) => {
@@ -292,7 +292,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     alreadyMovedPieces: Pieces,
     dir: Dir,
     preMoveState: Pick<State, "pieces">
-  ): [Pieces, boolean] => {
+  ): [Pieces | null, boolean] => {
     // take pieces that did not trigger the command AND are not on top of others
     // also pick just one from each herd
     const piecesToMove = Object.values(preMoveState.pieces).filter(
@@ -311,6 +311,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     );
     let pieceMoved = false;
     let anotherCommand = false; // this could trigger another command
+    let abortMove = false;
 
     // keep sliding pieces until not possible
     // (so we don't have to compute the optimal order to slide them in)
@@ -319,12 +320,15 @@ const _solvePuzzle = (puzzle: Puzzle) => {
       piecesToMove.forEach(({ id }) => {
         const piece = tmpPieces[id];
         const herd = piece.herdIds?.map((id) => tmpPieces[id]);
-        const [vector, command] = findSlideVector(
+        const [vector, command, abort] = findSlideVector(
           piece.pos,
           dir,
           tmpPieces,
           herd
         );
+        if (abort) {
+          abortMove = true;
+        }
         if (vector) {
           LOG && console.log("Commading", id, dir[2]);
           pieceMoved = true;
@@ -336,6 +340,8 @@ const _solvePuzzle = (puzzle: Puzzle) => {
         anotherCommand = anotherCommand || command;
       });
     } while (pieceMoved);
+
+    if (abortMove) return [null, false];
 
     return [
       Object.values(tmpPieces).reduce((commandedPieces, piece) => {
@@ -458,6 +464,7 @@ const _solvePuzzle = (puzzle: Puzzle) => {
           [true, false].forEach((isJump) => {
             let vector: Pos | null = null;
             let onCommand = false;
+
             if (isJump) {
               // attempt jump
               vector = findJumpVector(
@@ -501,6 +508,9 @@ const _solvePuzzle = (puzzle: Puzzle) => {
                 const [commandedPieces, anotherCommand] = onCommand
                   ? commandPieces(updatedPieces, dir, { pieces: newPieces })
                   : [{}, false];
+                if (commandedPieces === null) {
+                  return; // invalid command
+                }
 
                 newPieces = {
                   ...newPieces,

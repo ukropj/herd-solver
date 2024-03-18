@@ -492,17 +492,19 @@ optimal: 3
 
 #herd-traversal-test
 .. ..
-.. x.
+.. ..
 .. ..
 .. +
-..
-..
 ..
 ww
 pieces: B@3,0 WW@0,0+1,0
 optimal: 4
 
-
-
+#testxavoidance
+x.. ..
+ .. +..
+ w  ...
+pieces: W@2,0 B@5,1
+optimal: 7
 
 
