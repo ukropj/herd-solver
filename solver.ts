@@ -5,7 +5,8 @@ const LOG = false;
 const BUMP = "o";
 const HOLE = "u";
 const COMMAND = "+";
-const CAN_SLIDE_TO = /^[.bwu+]$/;
+const DEATH = "x";
+const CAN_SLIDE_TO = /^[.bwu+x]$/;
 const CAN_JUMP_OVER = /^[oBW]$/;
 const CAN_JUMP_TO = /^[.bwouBW+]$/;
 
@@ -159,7 +160,8 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     from: Pos[],
     dir: Dir,
     pieces: Pieces,
-    ignoreIds?: string[]
+    ignoreIds: string[],
+    dontWrap: boolean
   ) => {
     const tiles = from.map((fromPos) => getInPlan(fromPos));
     if (
@@ -170,12 +172,12 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     }
 
     return from.every((fromPos) => {
-      const to = add(fromPos, dir);
+      const to = add(fromPos, dir, dontWrap);
       // check if a wall would "slice a moving herd"
 
       if (
         from.length > 1 &&
-        from.some((otherPos) => isWall(add(otherPos, dir), to))
+        from.some((otherPos) => isWall(add(otherPos, dir, dontWrap), to))
       ) {
         return false;
       }
@@ -213,7 +215,15 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     let onCommand = (otherPoses ?? [pos]).some((p) => COMMAND === getInPlan(p));
 
     let vector: Pos = [0, 0];
-    while (canSlide(otherPoses ?? [pos], dir, pieces, ignoreIds)) {
+    while (
+      canSlide(
+        otherPoses ?? [pos],
+        dir,
+        pieces,
+        ignoreIds,
+        otherPoses != null && otherPoses.length > 0
+      )
+    ) {
       moved = true;
       vector = add(vector, dir, true);
       pos = add(pos, dir);
@@ -224,6 +234,9 @@ const _solvePuzzle = (puzzle: Puzzle) => {
 
       if (toStr(pos) === toStr(from)) {
         // would cause infinite sliding!
+        return [null, false];
+      }
+      if (getInPlan(pos) === DEATH) {
         return [null, false];
       }
     }

@@ -490,6 +490,18 @@ optimal: 1
 pieces: W@1,0 B@1,0 W@4,0 W@3,0 
 optimal: 3
 
+#herd-traversal-test
+.. ..
+.. x.
+.. ..
+.. +
+..
+..
+..
+ww
+pieces: B@3,0 WW@0,0+1,0
+optimal: 4
+
 
 
 

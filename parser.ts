@@ -31,7 +31,7 @@ const buildMultiId = (id: string, part: number, totalParts: number) =>
   totalParts > 1 ? `${id}:${part + 1}/${totalParts}` : id;
 
 const parsePlanRow = (planRow: string) => {
-  if (/^[ .wbou+]+$/.test(planRow)) {
+  if (/^[ .wbou+x]+$/.test(planRow)) {
     return planRow.split("") as TileKind[];
   } else throw Error(`Cannot parse plan row string: ${planRow}`);
 };
