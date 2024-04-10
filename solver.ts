@@ -118,8 +118,6 @@ const _solvePuzzle = (puzzle: Puzzle) => {
     return dontWrap ? result : wrapPos(puzzle, result);
   };
 
-  const toInfinity = (n: number) => (n === 0 ? 0 : n * Infinity);
-
   const getTopPieceInPlan = (
     [x, y]: Pos,
     pieces: Pieces,

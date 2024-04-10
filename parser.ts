@@ -1,3 +1,4 @@
+import { toStr } from "./solver";
 import { Piece, PieceKind, Pieces, Pos, Puzzle, TileKind, Wall } from "./types";
 
 const validateKind = (pieceKind: string, totalParts: number) => {
@@ -47,44 +48,85 @@ const isValid = (puzzle: Puzzle) => {
   return true;
 };
 
-const allPairs = (pieces: Piece[]) =>
-  pieces.flatMap((piece, i) =>
-    pieces.slice(i + 1).map((secondPiece) => [piece, secondPiece])
-  );
+const allSets = (pieces: Piece[], setSize: 1 | 2) => {
+  if (setSize === 2) {
+    // generate every possible pair (order does not matter)
+    return pieces.flatMap((piece, i) =>
+      pieces.slice(i + 1).map((secondPiece) => [piece, secondPiece])
+    );
+  }
+  // setSize === 1 - each piece in it's own set
+  return pieces.map((piece) => [piece]);
+};
 
-const buildAternatives = (piecesArr: Piece[], altKind: PieceKind) => {
-  const thePieces = piecesArr.filter(({ kind }) => kind === altKind);
+const buildAternatives = (
+  pieces: Pieces,
+  altKind: PieceKind,
+  altCount: 1 | 2
+) => {
+  const piecesArr = Object.values(pieces);
+  const thePieces = piecesArr
+    .filter(({ kind }) => kind === altKind)
+    .filter(({ id, herdIds }) => !herdIds || herdIds[0] === id); // for each herd keep just 1 piece ...
   const otherPieces = piecesArr.filter(({ kind }) => kind !== altKind);
 
-  return allPairs(thePieces).map((pair) =>
-    [...pair, ...otherPieces].reduce(
-      (pieces, piece) => ({ ...pieces, [piece.id]: piece }),
-      {} as Pieces
-    )
-  );
+  return allSets(thePieces, altCount)
+    .map((set) => {
+      const missingHerdPieces = set.flatMap(
+        (piece) => piece.herdIds?.map((id) => pieces[id]).slice(1) ?? []
+      );
+      return [...set, ...missingHerdPieces]; // ...and re-add the missing herd pieces here
+    })
+    .map((set) =>
+      [...set, ...otherPieces].reduce(
+        (pieces, piece) => ({ ...pieces, [piece.id]: piece }),
+        {} as Pieces
+      )
+    );
 };
 
 const checkPieceLimits = (puzzle: Puzzle) => {
+  // if there are starting pieces than allowed, consider them aternative starting setups
+
   const piecesArr = Object.values(puzzle.pieces);
   let alternatives: Pieces[] = [];
 
-  // check shepherds (max 2)
-  const shepherds = piecesArr.filter(({ kind }) => kind === "B");
-  if (shepherds.length > 2) {
-    alternatives = buildAternatives(piecesArr, "B");
-  }
+  // if (puzzle.no !== "#overlap-test") return;
+  // console.log(piecesArr);
 
-  // check single-sheep (max 2)
-  const sheep = piecesArr.filter(({ kind }) => kind === "W");
-  if (sheep.length > 2) {
-    if (alternatives.length) {
-      alternatives = alternatives.flatMap((altPieces) =>
-        buildAternatives(Object.values(altPieces), "W")
-      );
-    } else {
-      alternatives = buildAternatives(piecesArr, "W");
+  Object.entries({ B: 2, W: 2, WW: 1, WWW: 1 }).forEach((entry) => {
+    const pieceKind = entry[0] as PieceKind;
+    const maxCount = entry[1] as 1 | 2;
+    const placements = piecesArr
+      .filter(({ kind }) => kind === pieceKind)
+      .filter(({ id, herdIds }) => !herdIds || herdIds[0] === id); // for each herd keep just 1 piece
+
+    if (placements.length > maxCount) {
+      // console.log({ pieceKind, maxCount, placements: placements.length });
+      if (alternatives.length) {
+        alternatives = alternatives.flatMap((altPieces) =>
+          buildAternatives(altPieces, pieceKind, maxCount)
+        );
+      } else {
+        alternatives = buildAternatives(puzzle.pieces, pieceKind, maxCount);
+      }
     }
-  }
+  });
+  // ensure herds are not covering other pieces
+  alternatives = alternatives.filter((altPieces) => {
+    const altPiecesArr = Object.values(altPieces);
+    return altPiecesArr.every(
+      (piece) =>
+        !piece.herdIds || // check every herd piece X
+        !altPiecesArr.find(
+          // if there is piece Y
+          ({ id, pos, coversId }) =>
+            id != piece.id && // that is not the same piece
+            coversId != piece.id && // that is not covering the herd piece X
+            toStr(pos) === toStr(piece.pos) // and is on the same position as herd piece X
+        )
+    );
+  });
 
   // ensure stacks are kept
   alternatives = alternatives.filter((altPieces) =>
@@ -96,6 +138,10 @@ const checkPieceLimits = (puzzle: Puzzle) => {
   );
 
   if (alternatives.length) {
+    // console.log(
+    //   `Alternatives ${puzzle.no}: ${alternatives.length}\n`,
+    //   alternatives.map((pieces) => Object.keys(pieces).join(", "))
+    // );
     puzzle.pieces = {};
     puzzle.altPieces = alternatives;
   }
@@ -142,6 +188,7 @@ export const parsePuzzles = (lines: string[]) => {
             const partIds = positions.map((_, i) =>
               buildMultiId(id, i, positions.length)
             );
+            const isHerd = positions.length > 1;
 
             const oldPieces = Object.values(pieces);
 
@@ -151,19 +198,22 @@ export const parsePuzzles = (lines: string[]) => {
             partIds.forEach((id, i) => {
               const pos = positions[i];
 
-              const willCover = oldPieces.find(
-                (piece) =>
-                  !piece.coveredById &&
-                  piece.pos[0] === pos[0] &&
-                  piece.pos[1] === pos[1]
-              );
+              // herds cannot cover anything
+              const willCover = isHerd
+                ? undefined
+                : oldPieces.find(
+                    (piece) =>
+                      !piece.coveredById &&
+                      piece.pos[0] === pos[0] &&
+                      piece.pos[1] === pos[1]
+                  );
 
               newPieces[id] = {
                 id,
                 letter: letter,
                 kind: validateKind(kind, positions.length),
                 pos,
-                herdIds: positions.length > 1 ? partIds : undefined,
+                herdIds: isHerd ? partIds : undefined,
                 coversId: willCover?.id,
                 coveredById: undefined,
               };
