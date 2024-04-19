@@ -83,7 +83,7 @@ try {
       if (visualize) {
         render(puzzle);
       }
-      console.log(`${puzzle.no}: NOT solved`);
+      console.log(`${puzzle.no}: \x1b[31m${"NOT solved"}\x1b[0m`);
     }
   });
   console.log("DONE");

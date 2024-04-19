@@ -502,8 +502,9 @@ const _solvePuzzle = (puzzle: Puzzle) => {
               };
 
               let i = 0;
-              while (onCommand) {
-                const [commandedPieces, anotherCommand] = onCommand
+              // while (onCommand) {
+              if (onCommand) {
+                const [commandedPieces, _anotherCommand] = onCommand
                   ? commandPieces(updatedPieces, dir, { pieces: newPieces })
                   : [{}, false];
                 if (commandedPieces === null) {
@@ -514,16 +515,16 @@ const _solvePuzzle = (puzzle: Puzzle) => {
                   ...newPieces,
                   ...commandedPieces,
                 };
-                if (!anotherCommand) {
-                  break;
-                } else {
-                  i++;
-                  updatedPieces = commandedPieces;
-                }
-                if (i > 10) {
-                  // assume endless loop, abandon the state.
-                  return;
-                }
+                // if (!anotherCommand) {
+                //   break;
+                // } else {
+                //   i++;
+                //   updatedPieces = commandedPieces;
+                // }
+                // if (i > 10) {
+                //   // assume endless loop, abandon the state.
+                //   return;
+                // }
               }
 
               const newState: State = {
