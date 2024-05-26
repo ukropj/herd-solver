@@ -17,6 +17,7 @@ export type Pieces = Record<string, Piece>;
 
 export type Puzzle = {
   no: string;
+  flag?: string;
   plan: TileKind[][];
   pieces: Pieces;
   altPieces?: Pieces[];

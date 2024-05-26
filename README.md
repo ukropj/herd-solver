@@ -50,7 +50,7 @@ If you want to see a visual solution as well use `visual` or `-v`.
 
 ## Input
 
-Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
+Puzzles are loaded form `puzzles.txt`. Each puzzle entry has (in any order)
 
 - a line starting with `#` containing the name/id of the puzzle
 - a line starting with `pieces:` with starting pieces positions in format
@@ -64,6 +64,8 @@ Puzzles are loaded form `puzzles.txt`. Each puzzle entry has
 - optionally: a line starting with `height:` containing a single number, how many tiles fit on the page vertically (relevant for page travesal). **Lowest** allowed height is 3. If not specified, it is assumed the puzzle height is 8.
 - a line starting with `optimal:` containing a single number, the optimal number of steps
 - optionally: a line starting with `fixed:` containing a single number, the fixed optimal number of steps
+- optionally: a line starting with `~` containing a speciial flag
+  - `~secret` - activates the secret jumping mechanic
 - an **empty line** (or more) that signifies the end of the puzzle entry (not needed after the last puzzle)
 - all other lines are parts of the puzzle plan, each character is one tile
   - space - unpassable tile

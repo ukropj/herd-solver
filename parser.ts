@@ -170,6 +170,9 @@ export const parsePuzzles = (lines: string[]) => {
       if (/^#/.test(line)) {
         // puzzle number
         puzzle.no = line.trim();
+      } else if (/^~/.test(line)) {
+        // special flag
+        puzzle.flag = line.trim().substring(1);
       } else if (/^pieces:/.test(line)) {
         let bCount = 0;
         let wCount = 0;

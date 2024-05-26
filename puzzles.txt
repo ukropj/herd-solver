@@ -525,3 +525,10 @@ ww......
 ........
 pieces: B@0,4 WWW@2,4+3,4+3,5 WWW@2,5+3,4+3,5 WWW@4,3+5,2+5,3 WW@3,3+4,3 WW@5,2+6,2 WW@3,3+3,4
 optimal: 6
+
+#jumper
+~secret
+.obo..ob
+pieces: B@0,0 B@0,0 W@4,0
+walls: 5,0|6,0
+optimal: 6

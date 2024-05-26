@@ -78,7 +78,7 @@ export const solvePuzzle = (puzzle: Puzzle) => {
   );
 
   let lowestStep = puzzle.optimal + 1;
-  let bestSolutionIndex = null;
+  let bestSolutionIndex: number | null = null;
   solutions.forEach((solution, i) => {
     if (solution?.step && solution.step < lowestStep) {
       lowestStep = solution.step;
@@ -244,12 +244,16 @@ const _solvePuzzle = (puzzle: Puzzle) => {
   const canJump = (from: Pos, dir: Dir, pieces: Pieces, idUnder?: string) => {
     if (!idUnder && HOLE === getInPlan(from)) return false;
 
+    // if secret mechanic is turned on, ignore walls if 2 pieces are under
+    const ignoreWalls =
+      puzzle.flag === "secret" && idUnder && pieces[idUnder].coversId;
+
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
     return (
-      !isWall(from, jumpOver) &&
+      (ignoreWalls || !isWall(from, jumpOver)) &&
       CAN_JUMP_OVER.test(getInPlan(jumpOver, pieces)) &&
-      !isWall(jumpOver, to) &&
+      (ignoreWalls || !isWall(jumpOver, to)) &&
       CAN_JUMP_TO.test(getInPlan(to))
     );
   };
