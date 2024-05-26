@@ -246,7 +246,9 @@ const _solvePuzzle = (puzzle: Puzzle) => {
 
     // if secret mechanic is turned on, ignore walls if 2 pieces are under
     const ignoreWalls =
-      puzzle.flag === "secret" && idUnder && pieces[idUnder].coversId;
+      puzzle.flag === "secret" &&
+      idUnder &&
+      (pieces[idUnder].coversId || getInPlan(from) === BUMP);
 
     const jumpOver = add(from, dir);
     const to = add(jumpOver, dir);
